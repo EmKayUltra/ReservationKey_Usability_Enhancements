@@ -26,23 +26,6 @@ Enjoy!
 
 ***/
 
-/* GENERAL TODO LIST
-	//TODO: BUG AutoRefresh not detecting actions & not logging after leaving page to activity then returning to availability - but refreshes still seem to happen..?
-	//TODO: BUG DoublePaymentPrevention - if enable paymentprevention with reservation & links already open, doesn't actually enable it yet	
-	//TODO: REVIEW standardize "_" prefix and me. vs var for all; move attach/unattach to basemodule?
-	//TODO: REVIEW revist turn on vs enable
-	//TODO: REVIEW AutoRefresh - review autoRefresh logic
-	//TODO: REVIEW HookHelper
-	//TODO: REVIEW EnhancementsController
-	//TODO: REVIEW UsabilityEnhancements
-	//TODO: NEW MODULE better billing address parsing
-	//TODO: NEW MODULE fix "this Invalid account name / file not found (please click a tab to load the system)."?
-	//TODO: FEATURE ADD HookHelper - change the way we hook into ajax events if possible instead of polling
-	//TODO: FEATURE ADD HookHelper - the way we sense page changes - potentially sense pages by hooking into "viewer" functions
-	//TODO: FEATURE ADD AutoRefresh - Calculate difference in table and update rather than fully reload autorefresh (phase 1 - only refresh if there IS a difference) - I believe this may be impossible
-	//TODO: FEATURE ADD AutoReminders "update reminders count when checking off reminders"?	
-*/
-
 $.noConflict();  //no need to overwrite ResKey's existing $ function - we'll just call "jQuery" whenever we need jQuery functionality
 console.log("starting ResKey GM script...");
 
