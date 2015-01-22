@@ -149,6 +149,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.ALLOW_EXPERIMENTAL_MODULES = true;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
+	this.DEFAULT_BILLING_COUNTRY = "US"; //this must be the two letter representation of the country as ResKey understands it
 	
 	//Probably never change anything below this line
 	this.JQUERY_EVENT_CLASS_PREFIX = "ResKeyGM_";
@@ -158,9 +159,12 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_OFF_VALUE = 0;
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
 	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: false, module_name: "", module_name_readable: "", module_description: "" };
-	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector" ];
+	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser" ];
 	this.MODULES_LIST_EXPERIMENTAL = [ "AjaxHistory", "AutoRefresh" ];
-	this.MODULE_OPTIONS = { "AutoRefresh" : { logging: true } };
+	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
+							"AutoRefresh" : { logging: true },
+							"BillingAddressParser" : { logging: true, default_country: this.DEFAULT_BILLING_COUNTRY }
+	};
 });
 
 Utils.NamespaceUtility.RegisterClass("ResKey", "HelperUtility", new function(){
@@ -269,6 +273,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ModuleFactory", new func
 			case "AutoReminders": return new ResKey.Modules.AutoReminders(options);
 			case "AjaxHistory": return new ResKey.Modules.AjaxHistory(options);
 			case "CreditCardTypeAutoSelector": return new ResKey.Modules.CreditCardTypeAutoSelector(options);
+			case "BillingAddressParser": return new ResKey.Modules.BillingAddressParser(options);
 			default: return {};
 		}
 	};
@@ -305,7 +310,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ModuleBase", function(o)
 		this._isLogging = (typeof options.logging != "undefined") ? options.logging : false;
 		this._initializeCookieIfNeeded();
 		
-		this._initializeModule();
+		this._initializeModule(options);
 		
 		if (options.autoLoad) {
 			this.turnOnIfEnabled();
@@ -819,6 +824,11 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "CreditCardTypeAutoSelect
 			me.turnOnOrOffBasedOnCurrentPage();
 		});
 	};
+
+	var unattachToPageEvents = function() {
+		me._log("unattaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName);
+	};
 	
 	me._enable = function() {
 		attachToPageEvents();
@@ -1022,6 +1032,168 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 ResKey.Modules.AjaxHistory.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
 ResKey.Modules.AjaxHistory.prototype.constructor = ResKey.Modules.AjaxHistory;
 /****END AJAXHISTORY****/
+
+/****BEGIN BILLINGADDRESSPARSER****/
+Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", function(o){
+	var me = this;
+	var defaultCountry;
+	var Address = {
+		StreetAddress1: "",
+		StreetAddress2: "",
+		City: "",
+		State: "",
+		Zip: "",
+		Country: ""
+	};
+
+	var parseOutCountry = function(addressText) {
+	    var resArray = /([\s\S]*)\n(.*)$/.exec(addressText);
+	    var countryOrLastLine = resArray[2];
+	    if (/^[a-zA-Z]+$/.test(countryOrLastLine)) {
+	        return countryOrLastLine;
+	    }
+	    
+	    return "";
+	}
+
+	var chopOffLastLine = function(str) {
+	    return /([\s\S]*)\n(.*)$/.exec(str)[1];
+	}
+
+	var chopOffLastTextBlock = function(str) {
+	    return /([\s\S]*) (.*)$/.exec(str)[1];
+	}
+
+	var parseOutZip = function(addressText) {
+	  var resArray = /([\s\S]*) ([0-9\-]*)$/.exec(addressText);
+	  return resArray[2];
+	}
+
+	var parseOutState = function(addressText) {
+	  var resArray = /([\s\S]*), ([a-zA-Z]*)$/.exec(addressText);
+	  return resArray[2]; 
+	}
+
+	var parseOutCity = function(addressText) {
+	  var resArray = /([\s\S]*)\n([a-zA-Z]*)$/.exec(addressText);
+	  return resArray[2];    
+	}
+
+	var parseOutAddress1 = function(addressText) {
+	  var resArray = /^(.+)(\n)?/.exec(addressText);
+	  return resArray[1];  
+	}
+
+	var parseOutAddress2 = function(addressText) {
+	  var resArray = /.+\n(.*)$/.exec(addressText);
+	  if (resArray != null) {
+	      return resArray[1];  
+	  }
+	  return "";
+	}
+
+	var createAddressObjectFromUserEnteredText = function(addressText) {
+		me._log("parsing address: "+addressText);
+		//start at the end
+
+		//is it text? if so is COUNTRY
+		//otherwise is ZIP XXXXX-XXXX
+		//next is state , XX
+		//next is city
+		//next is street address 1 & possibly 2
+
+		var textToParse = addressText;
+		var country = parseOutCountry(textToParse);
+		me._log("country: "+country);
+		if (country != "") {   
+		    //then chop off country
+		    textToParse = chopOffLastLine(textToParse);   
+		}
+		var zip = parseOutZip(textToParse);  
+		me._log("zip: "+zip);
+		textToParse = chopOffLastTextBlock(textToParse);
+		var state = parseOutState(textToParse);
+		me._log("state: "+state);
+		textToParse = chopOffLastTextBlock(textToParse);
+		textToParse = textToParse.substr(textToParse, textToParse.length-1);
+		var city = parseOutCity(textToParse);
+		me._log("city: "+city);
+		textToParse = chopOffLastLine(textToParse);
+		var addr1 = parseOutAddress1(textToParse);
+		me._log("addr1: "+addr1);
+		var addr2 = parseOutAddress2(textToParse);
+		me._log("addr2: "+addr2);
+		Address.Zip = zip;
+		Address.State = state;
+		Address.City = city;
+		if (country == "") { 
+			country = defaultCountry;
+		}
+		Address.Country = (country == "USA") ? "US" : country;
+		Address.StreetAddress1 = addr1;
+		Address.StreetAddress2 = addr2;
+	};
+
+	var fillAddressFieldsFromAddress = function() {
+		jQuery("#ccaddress").val(Address.StreetAddress1+" "+Address.StreetAddress2);
+		jQuery("#cccountry").val(Address.Country);
+		jQuery("#cccity").val(Address.City);
+		jQuery("#ccstate").val(Address.State);
+		jQuery("#cczip").val(Address.Zip);
+	};
+	
+	var attachToPageEvents = function() {
+		me._log("attaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName, function(e){
+			me._log("detected page change");
+			me.turnOnOrOffBasedOnCurrentPage();
+		});
+	};
+
+	var unattachToPageEvents = function() {
+		me._log("unattaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName);
+	};
+	
+	me._enable = function() {
+		attachToPageEvents();
+	};
+	
+	me._disable = function() {
+		unattachToPageEvents();
+	};
+	
+	me._turnOn = function() {		
+		jQuery(document).off("blur."+me._eventName, "#address").on("blur."+me._eventName, "#address", function(e) {
+			me._log("blur detected with value: "+jQuery(this).val());
+			createAddressObjectFromUserEnteredText(jQuery(this).val());
+			
+			fillAddressFieldsFromAddress();
+			
+			return true;
+		});
+	};
+	
+	me._turnOff = function() {
+		jQuery(document).off("blur."+me._eventName, "#address");
+	};
+	
+	me._isOnRelevantPage = function() {
+		return ResKey.HelperUtility.currentlyOnReservationsTab();
+	};
+	
+	me._initializeModule = function(o) {
+		if (me.isEnabled()) {
+			me._enable();
+		}
+		defaultCountry = o.default_country;
+	};
+	o = jQuery.extend(o, { module_name: "BillingAddressParser", module_name_readable: "Billing Address Parser", module_description: "Parses City/State/Zip out of Contact Address into Billing Address fields for CC." });
+	ResKey.Modules.ModuleBase.call(me, o);
+});
+ResKey.Modules.BillingAddressParser.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
+ResKey.Modules.BillingAddressParser.prototype.constructor = ResKey.Modules.BillingAddressParser;
+/****END BILLINGADDRESSPARSER****/
 
 
 /****BEGIN ENHANCEMENTS CONTROLLER****/
