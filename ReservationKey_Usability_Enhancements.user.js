@@ -1050,6 +1050,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 		jQuery("#ccstate").val(Address.State);
 		jQuery("#cczip").val(Address.Zip);
 	};
+
+	var fillAddressNormally = function(addressText) {
+		jQuery("#ccaddress").val(addressText);
+	};
 	
 	var attachToPageEvents = function() {
 		me._log("attaching to pagechange events");
@@ -1075,11 +1079,17 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 	me._turnOn = function() {		
 		jQuery(document).off("blur."+me._eventName, "#address").on("blur."+me._eventName, "#address", function(e) {
 			me._log("blur detected with value: "+jQuery(this).val());
-			createAddressObjectFromUserEnteredText(jQuery(this).val());
+			try {
+				createAddressObjectFromUserEnteredText(jQuery(this).val());
 			
-			fillAddressFieldsFromAddress();
-			
-			return true;
+				fillAddressFieldsFromAddress();
+				
+				return true;
+			}
+			catch(ex) { //fallback to old behavior if odd case encountered.
+				fillAddressNormally(jQuery(this).val());
+				return true;
+			}
 		});
 	};
 	
