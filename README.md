@@ -1,4 +1,5 @@
 # ReservationKey_Usability_Enhancements
+
 GreaseMonkey script for ReservationKey Usability Enhancements
 With John's blessing, I am here to present to you a way to get some helpful new functionality into your ReservationKey, for FREE.  This is UNOFFICIAL so John is in no way responsible for it or supporting it.  I have developed them myself to meet my own needs, but thought the community could benefit from them as well.  I will be constantly updating them and responding to any needs that arise.
 
@@ -24,9 +25,9 @@ To start using these enhancements today, all you need to do is follow these simp
 3.  Open Firefox and <a href="https://gist.github.com/anonymous/80d0f1345590759cd517#file-reservationkey_usability_enhancements-user-js">Go here</a> and click the "Raw" button, which should install the enhancements for you.
 4.  Restart Firefox and open up ReservationKey.
 5.  You will see a very small [ + ] in the bottom left hand corner of the screen:
-	<img src=”http://oi57.tinypic.com/9hnyv9.jpg” />
+	![Plus Sign in Bottom Left](http://oi57.tinypic.com/9hnyv9.jpg)
 6.  If you click this, you will see all the enhancements you have available to you, and if you hover over one of them, it will tell you what it does.  
-	<img src=”http://oi60.tinypic.com/2lbm39g.jpg” />
+	![Enhancements Controller](http://oi60.tinypic.com/2lbm39g.jpg)
 7.  As soon as you click the checkbox for one, it will begin working immediately!  
 
 If you have ANY questions or have ideas of something you'd like me to add, respond to this thread and I will do what I can to help.  
