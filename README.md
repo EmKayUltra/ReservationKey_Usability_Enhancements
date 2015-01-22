@@ -25,9 +25,9 @@ To start using these enhancements today, all you need to do is follow these simp
 3.  Open Firefox and <a href="https://gist.github.com/anonymous/80d0f1345590759cd517#file-reservationkey_usability_enhancements-user-js">Go here</a> and click the "Raw" button, which should install the enhancements for you.
 4.  Restart Firefox and open up ReservationKey.
 5.  You will see a very small [ + ] in the bottom left hand corner of the screen:
-	<img src=”http://oi57.tinypic.com/9hnyv9.jpg” />
+	![Plus Sign in Bottom Left](http://oi57.tinypic.com/9hnyv9.jpg)
 6.  If you click this, you will see all the enhancements you have available to you, and if you hover over one of them, it will tell you what it does.  
-	<img src=”http://oi60.tinypic.com/2lbm39g.jpg” />
+	![Enhancements Controller](http://oi60.tinypic.com/2lbm39g.jpg)
 7.  As soon as you click the checkbox for one, it will begin working immediately!  
 
 If you have ANY questions or have ideas of something you'd like me to add, respond to this thread and I will do what I can to help.  

@@ -420,8 +420,8 @@ ResKey.Modules.ForceHttps.prototype.constructor = ResKey.Modules.ForceHttps;
 /****BEGIN AUTOREFRESH****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o){
 	var me = this;
-	var REFRESH_INTERVAL_MILLISECONDS = 30000; //refresh every 10 seconds (initiated by idle state, canceled by active state)
-	var IDLE_THRESHOLD_MILLISECONDS = 30000; //considered idle if 10 seconds have passed since last action	
+	var REFRESH_INTERVAL_MILLISECONDS = 30000; //refresh every 30 seconds (initiated by idle state, canceled by active state)
+	var IDLE_THRESHOLD_MILLISECONDS = 30000; //considered idle if 30 seconds have passed since last action	
 	var refreshTimer;
 	var idleTimer;
 	
@@ -1237,7 +1237,6 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "UsabilityEnhancements", new func
 //jQuery("head").append('<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" rel="stylesheet" type="text/css">');
 
 jQuery(function(){
-	ResKey.UsabilityEnhancements.run();
-	
+	ResKey.UsabilityEnhancements.run();	
 });
 /****END SETUP****/
