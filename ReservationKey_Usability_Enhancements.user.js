@@ -10,7 +10,7 @@
 // @require    http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js
 // @require    http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js
 // @require    https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js
-// @version    1.1
+// @version    1.0
 // @grant      none
 // ==/UserScript==
 /* NOTE: "@include" very specific (no general-case asterixes, etc) because otherwise all of this loads for every AJAX call as well */
@@ -28,97 +28,6 @@ Enjoy!
 
 $.noConflict();  //no need to overwrite ResKey's existing $ function - we'll just call "jQuery" whenever we need jQuery functionality
 console.log("starting ResKey GM script...");
-
-/* Simple JavaScript Inheritance
- * By John Resig http://ejohn.org/
- * MIT Licensed.
- */
-// Inspired by base2 and Prototype
-// (function(){
-//   var initializing = false, fnTest = /xyz/.test(function(){xyz;}) ? /\b_super\b/ : /.*/;
- 
-//   // The base Class implementation (does nothing)
-//   this.Class = function(){};
- 
-//   // Create a new Class that inherits from this class
-//   Class.extend = function(prop) {
-//     var _super = this.prototype;
-   
-//     // Instantiate a base class (but only create the instance,
-//     // don't run the init constructor)
-//     initializing = true;
-//     var prototype = new this();
-//     initializing = false;
-   
-//     // Copy the properties over onto the new prototype
-//     for (var name in prop) {
-//       // Check if we're overwriting an existing function
-//       prototype[name] = typeof prop[name] == "function" &&
-//         typeof _super[name] == "function" && fnTest.test(prop[name]) ?
-//         (function(name, fn){
-//           return function() {
-//             var tmp = this._super;
-           
-//             // Add a new ._super() method that is the same method
-//             // but on the super-class
-//             this._super = _super[name];
-           
-//             // The method only need to be bound temporarily, so we
-//             // remove it when we're done executing
-//             var ret = fn.apply(this, arguments);        
-//             this._super = tmp;
-           
-//             return ret;
-//           };
-//         })(name, prop[name]) :
-//         prop[name];
-//     }
-   
-//     // The dummy class constructor
-//     function Class() {
-//       // All construction is actually done in the init method
-//       if ( !initializing && this.init )
-//         this.init.apply(this, arguments);
-//     }
-   
-//     // Populate our constructed prototype object
-//     Class.prototype = prototype;
-   
-//     // Enforce the constructor to be what we expect
-//     Class.prototype.constructor = Class;
- 
-//     // And make this class extendable
-//     Class.extend = arguments.callee;
-   
-//     return Class;
-//   };
-// })(); 
-// var Person = Class.extend({
-//   init: function(isDancing){
-//     this.dancing = isDancing;
-//   },
-//   dance: function(){
-//     return this.dancing;
-//   }
-// });
- 
-// var Ninja = Person.extend({
-//   init: function(){
-//     this._super( false );
-//   },
-//   dance: function(){
-//     // Call the inherited version of dance()
-//     return this._super();
-//   },
-//   swingSword: function(){
-//     return true;
-//   }
-// });
- 
-// var p = new Person(true);
-// p.dance(); // => true
- 
-// var n = new Ninja();
 
 /****BEGIN GENERAL HELPERS****/
 (function () {
@@ -145,7 +54,7 @@ console.log("starting ResKey GM script...");
 
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
-	this.ENABLE_LOGGING = true;
+	this.ENABLE_LOGGING = false;
 	this.ALLOW_EXPERIMENTAL_MODULES = false;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
@@ -158,8 +67,8 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_OFF_VALUE = 0;
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
 	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: false, module_name: "", module_name_readable: "", module_description: "" };
-	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoRefresh", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector" ];
-	this.MODULES_LIST_EXPERIMENTAL = [ "AjaxHistory" ];
+	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector" ];
+	this.MODULES_LIST_EXPERIMENTAL = [ "AjaxHistory", "AutoRefresh" ];
 	this.MODULE_OPTIONS = { "AutoRefresh" : { logging: true } };
 });
 
