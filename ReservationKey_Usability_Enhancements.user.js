@@ -146,7 +146,7 @@ console.log("starting ResKey GM script...");
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
 	this.ENABLE_LOGGING = true;
-	this.ALLOW_EXPERIMENTAL_MODULES = false;
+	this.ALLOW_EXPERIMENTAL_MODULES = true;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
 	
@@ -158,8 +158,8 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_OFF_VALUE = 0;
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
 	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: false, module_name: "", module_name_readable: "", module_description: "" };
-	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoRefresh", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector" ];
-	this.MODULES_LIST_EXPERIMENTAL = [ "AjaxHistory" ];
+	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector" ];
+	this.MODULES_LIST_EXPERIMENTAL = [ "AjaxHistory", "AutoRefresh" ];
 	this.MODULE_OPTIONS = { "AutoRefresh" : { logging: true } };
 });
 
@@ -1030,12 +1030,19 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "EnhancementsController", new fun
 	var moduleList;
 	
 	var createCheckboxForModule = function(module) {
-		var checkbox = jQuery("<input type='checkbox' id='chk+"+module._moduleName+"' style='margin-left: 10px;' title='"+module._moduleDescription+"' /><label>"+module._moduleNameReadable+"</a>");
+		var checkbox;
 		
+		if (isExperimentalModule(module._moduleName)) {
+ 			checkbox = jQuery("<input type='checkbox' id='chk+"+module._moduleName+"' style='margin-left: 10px;' title='"+module._moduleDescription+"' /><label style='color: red;'>"+module._moduleNameReadable+"</a>");
+		}
+		else {
+ 			checkbox = jQuery("<input type='checkbox' id='chk+"+module._moduleName+"' style='margin-left: 10px;' title='"+module._moduleDescription+"' /><label>"+module._moduleNameReadable+"</a>");
+		}
+
 		if (module.isEnabled()) {
 			checkbox.prop("checked", true);
 		}	
-		
+
 		checkbox.on("click.gmEnhancementsController", function(){
 			if (jQuery(this).prop("checked")){
 				module.enableAndTurnOn();
@@ -1051,6 +1058,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "EnhancementsController", new fun
 
 	var addCheckboxForModuleToController = function(module) {
 		jQuery(jQuery("<div style='float: left; margin-right: 10px;' />").append(createCheckboxForModule(module))).appendTo("#EnhancementsController_ModuleContainer");
+	};
+
+	var isExperimentalModule = function(moduleName) {
+		return ResKey.Settings.MODULES_LIST_EXPERIMENTAL.indexOf(moduleName) >= 0;
 	};
 
 	var addModulesToController = function() {
