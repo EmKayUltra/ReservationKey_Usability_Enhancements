@@ -13,6 +13,8 @@ Double Payment Prevention - Pops up a confirmation dialog when you "Add Payment,
 
 Automatically Select Credit Card Type - Once you start typing the credit card number, the correct credit card type (Visa, Mastercard, Discover, American Express) will automatically be selected based on the card #.
 
+Billing Address Parser - Will usually correctly take the "contact address" & separate it into the various components (address, city, state, zip, country)
+
 COMING SOON:
 
 Auto Refresh - Automatically refresh the calendar availability screen
