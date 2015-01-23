@@ -11,4 +11,5 @@
 - [ ] FEATURE ADD HookHelper - change the way we hook into ajax events if possible instead of polling
 - [ ] FEATURE ADD HookHelper - the way we sense page changes - potentially sense pages by hooking into "viewer" functions
 - [ ] FEATURE ADD AutoRefresh - Calculate difference in table and update rather than fully reload autorefresh (phase 1 - only refresh if there IS a difference) - I believe this may be impossible
-- [ ] FEATURE ADD AutoReminders "update reminders count when checking off reminders"?	
+- [ ] FEATURE ADD AutoReminders - update reminders count when checking off reminders?
+- [ ] FEATURE ADD BillingAddressParser - click "use guest address" cause parser to run
