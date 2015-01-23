@@ -27,6 +27,7 @@ COMING SOON:
 Auto Refresh - Automatically refresh the calendar availability screen
 History - Enable the use of the "Back" and "Forward" browser buttons
 
+## Instructions
 To start using these enhancements today, all you need to do is follow these simple instructions:
 
 1.  You MUST use the <a href="https://www.mozilla.org/en-US/firefox/new/">Mozilla Firefox web browser</a> or <a href="https://www.google.com/chrome/browser/desktop/">Google Chrome web browser</a>.  Install & use whichever you one you prefer.
