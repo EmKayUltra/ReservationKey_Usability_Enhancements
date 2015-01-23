@@ -984,7 +984,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 	}
 
 	var parseOutCity = function(addressText) {
-	  var resArray = /([\s\S]*)\n([a-zA-Z]*)$/.exec(addressText);
+	  var resArray = /([\s\S]*)\n([a-zA-Z ]*)$/.exec(addressText);
 	  return resArray[2];    
 	}
 
