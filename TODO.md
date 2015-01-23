@@ -1,5 +1,5 @@
 ### New Modules
-- [ X ] better billing address parsing
+- [X] better billing address parsing
 - [ ] fix "this Invalid account name / file not found (please click a tab to load the system)."?
 ### Features
 - [ ] HookHelper - change the way we hook into ajax events if possible instead of polling
