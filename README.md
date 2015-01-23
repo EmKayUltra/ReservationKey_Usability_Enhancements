@@ -1,8 +1,8 @@
 # ReservationKey_Usability_Enhancements
 
 Table of Contents
-- <a href="updateLog">Update Log</a>
-- <a href="overview">Overview</a>
+- <a href="#updateLog">Update Log</a>
+- <a href="#overview">Overview</a>
 - <a href="#instructions">Instructions</a>
 
 
