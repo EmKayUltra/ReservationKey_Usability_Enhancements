@@ -29,97 +29,6 @@ Enjoy!
 $.noConflict();  //no need to overwrite ResKey's existing $ function - we'll just call "jQuery" whenever we need jQuery functionality
 console.log("starting ResKey GM script...");
 
-/* Simple JavaScript Inheritance
- * By John Resig http://ejohn.org/
- * MIT Licensed.
- */
-// Inspired by base2 and Prototype
-// (function(){
-//   var initializing = false, fnTest = /xyz/.test(function(){xyz;}) ? /\b_super\b/ : /.*/;
- 
-//   // The base Class implementation (does nothing)
-//   this.Class = function(){};
- 
-//   // Create a new Class that inherits from this class
-//   Class.extend = function(prop) {
-//     var _super = this.prototype;
-   
-//     // Instantiate a base class (but only create the instance,
-//     // don't run the init constructor)
-//     initializing = true;
-//     var prototype = new this();
-//     initializing = false;
-   
-//     // Copy the properties over onto the new prototype
-//     for (var name in prop) {
-//       // Check if we're overwriting an existing function
-//       prototype[name] = typeof prop[name] == "function" &&
-//         typeof _super[name] == "function" && fnTest.test(prop[name]) ?
-//         (function(name, fn){
-//           return function() {
-//             var tmp = this._super;
-           
-//             // Add a new ._super() method that is the same method
-//             // but on the super-class
-//             this._super = _super[name];
-           
-//             // The method only need to be bound temporarily, so we
-//             // remove it when we're done executing
-//             var ret = fn.apply(this, arguments);        
-//             this._super = tmp;
-           
-//             return ret;
-//           };
-//         })(name, prop[name]) :
-//         prop[name];
-//     }
-   
-//     // The dummy class constructor
-//     function Class() {
-//       // All construction is actually done in the init method
-//       if ( !initializing && this.init )
-//         this.init.apply(this, arguments);
-//     }
-   
-//     // Populate our constructed prototype object
-//     Class.prototype = prototype;
-   
-//     // Enforce the constructor to be what we expect
-//     Class.prototype.constructor = Class;
- 
-//     // And make this class extendable
-//     Class.extend = arguments.callee;
-   
-//     return Class;
-//   };
-// })(); 
-// var Person = Class.extend({
-//   init: function(isDancing){
-//     this.dancing = isDancing;
-//   },
-//   dance: function(){
-//     return this.dancing;
-//   }
-// });
- 
-// var Ninja = Person.extend({
-//   init: function(){
-//     this._super( false );
-//   },
-//   dance: function(){
-//     // Call the inherited version of dance()
-//     return this._super();
-//   },
-//   swingSword: function(){
-//     return true;
-//   }
-// });
- 
-// var p = new Person(true);
-// p.dance(); // => true
- 
-// var n = new Ninja();
-
 /****BEGIN GENERAL HELPERS****/
 (function () {
     var NamespaceUtility = new function() {
@@ -145,8 +54,8 @@ console.log("starting ResKey GM script...");
 
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
-	this.ENABLE_LOGGING = true;
-	this.ALLOW_EXPERIMENTAL_MODULES = true;
+	this.ENABLE_LOGGING = false;
+	this.ALLOW_EXPERIMENTAL_MODULES = false;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
 	this.DEFAULT_BILLING_COUNTRY = "US"; //this must be the two letter representation of the country as ResKey understands it
@@ -1075,7 +984,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 	}
 
 	var parseOutCity = function(addressText) {
-	  var resArray = /([\s\S]*)\n([a-zA-Z]*)$/.exec(addressText);
+	  var resArray = /([\s\S]*)\n([a-zA-Z ]*)$/.exec(addressText);
 	  return resArray[2];    
 	}
 
@@ -1141,6 +1050,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 		jQuery("#ccstate").val(Address.State);
 		jQuery("#cczip").val(Address.Zip);
 	};
+
+	var fillAddressNormally = function(addressText) {
+		jQuery("#ccaddress").val(addressText);
+	};
 	
 	var attachToPageEvents = function() {
 		me._log("attaching to pagechange events");
@@ -1166,11 +1079,17 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 	me._turnOn = function() {		
 		jQuery(document).off("blur."+me._eventName, "#address").on("blur."+me._eventName, "#address", function(e) {
 			me._log("blur detected with value: "+jQuery(this).val());
-			createAddressObjectFromUserEnteredText(jQuery(this).val());
+			try {
+				createAddressObjectFromUserEnteredText(jQuery(this).val());
 			
-			fillAddressFieldsFromAddress();
-			
-			return true;
+				fillAddressFieldsFromAddress();
+				
+				return true;
+			}
+			catch(ex) { //fallback to old behavior if odd case encountered.
+				fillAddressNormally(jQuery(this).val());
+				return true;
+			}
 		});
 	};
 	
