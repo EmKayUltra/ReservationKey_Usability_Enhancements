@@ -7,8 +7,7 @@
 
 ### Features
 - [ ] AutoRefresh - Calculate difference in table and update rather than fully reload autorefresh (phase 1 - only refresh if there IS a difference) - I believe this may be impossible
-- [ ] AutoReminders - update reminders count when checking off reminders?
-- [ ] BillingAddressParser - click "use guest address" cause parser to run
+- [X] BillingAddressParser - click "use guest address" cause parser to run - v1.2
 
  
 ### Bugs
