@@ -10,7 +10,7 @@
 // @require    http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js
 // @require    http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js
 // @require    https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js
-// @version    1.1
+// @version    1.2
 // @grant      none
 // ==/UserScript==
 /* NOTE: "@include" very specific (no general-case asterixes, etc) because otherwise all of this loads for every AJAX call as well */
@@ -54,8 +54,8 @@ console.log("starting ResKey GM script...");
 
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
-	this.ENABLE_LOGGING = false;
-	this.ALLOW_EXPERIMENTAL_MODULES = false;
+	this.ENABLE_LOGGING = true;
+	this.ALLOW_EXPERIMENTAL_MODULES = true;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
 	this.DEFAULT_BILLING_COUNTRY = "US"; //this must be the two letter representation of the country as ResKey understands it
@@ -1055,6 +1055,20 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 		jQuery("#ccaddress").val(addressText);
 	};
 	
+	var parseContactAddressIntoBillingAddress = function(addressText) {
+		try {
+			createAddressObjectFromUserEnteredText(addressText);
+		
+			fillAddressFieldsFromAddress();
+			
+			return true;
+		}
+		catch(ex) { //fallback to old behavior if odd case encountered.
+			fillAddressNormally(addressText);
+			return true;
+		}
+	};
+
 	var attachToPageEvents = function() {
 		me._log("attaching to pagechange events");
 		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName, function(e){
@@ -1079,22 +1093,18 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 	me._turnOn = function() {		
 		jQuery(document).off("blur."+me._eventName, "#address").on("blur."+me._eventName, "#address", function(e) {
 			me._log("blur detected with value: "+jQuery(this).val());
-			try {
-				createAddressObjectFromUserEnteredText(jQuery(this).val());
-			
-				fillAddressFieldsFromAddress();
-				
-				return true;
-			}
-			catch(ex) { //fallback to old behavior if odd case encountered.
-				fillAddressNormally(jQuery(this).val());
-				return true;
-			}
+			parseContactAddressIntoBillingAddress(jQuery(this).val());
+		});
+
+		jQuery(document).off("click."+me._eventName, "a:contains('contact address')").on("click."+me._eventName, "a:contains('contact address')", function(e){
+			me._log("'contact address' click detected");
+			parseContactAddressIntoBillingAddress(jQuery("#address").val());
 		});
 	};
 	
 	me._turnOff = function() {
 		jQuery(document).off("blur."+me._eventName, "#address");
+		jQuery(document).off("click."+me._eventName, "a:contains('contact address')");
 	};
 	
 	me._isOnRelevantPage = function() {
