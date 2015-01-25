@@ -384,15 +384,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 	var refreshTimer;
 	var idleTimer;
 	
-	me.getRefreshInterval = function() {
-		return REFRESH_INTERVAL_MILLISECONDS;
-	};
-	
-	me.getIdleInterval = function() {
-		return IDLE_THRESHOLD_MILLISECONDS;
-	};
-	
-	me.cancelTimers = function() {
+	var cancelTimers = function() {
 		if (idleTimer != null) {
 			clearTimeout(idleTimer);
 		}
@@ -401,41 +393,66 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 		}
 	};
 
-	me.actionDetected = function() {
+	var actionDetected = function() {
 		if (me.isEnabled() && ResKey.HelperUtility.currentlyOnAvailabilityTab()) {
 			me._log("action detected");
-			me.cancelTimers();
-			me.awaitIdleState();		
+			cancelTimers();
+			awaitIdleState();		
 		}
 		else {
-			me.cancelTimers();
+			cancelTimers();
 		}
 		return true;
 	};
 
-	me.awaitIdleState = function() {
+	var awaitIdleState = function() {
 		me._log("awaiting idle state");
-		idleTimer = setTimeout(function() { me.setRefreshTimer(); }, IDLE_THRESHOLD_MILLISECONDS);
+		idleTimer = setTimeout(function() { setRefreshTimer(); }, IDLE_THRESHOLD_MILLISECONDS);
 	};
 
-	me.setRefreshTimer = function() {
+	var setRefreshTimer = function() {
 		me._log("setting refresh timer");
-		refreshTimer = setInterval(function(){ me.autoRefresh(); }, REFRESH_INTERVAL_MILLISECONDS);
+		refreshTimer = setInterval(function(){ autoRefresh(); }, REFRESH_INTERVAL_MILLISECONDS);
 	};
 
-	me.autoRefresh = function () {
+	var autoRefresh = function () {
 		me._log("autorefresh state");
 		if (!$('save')) {
 			ResKey.HookHelper.setOldState(0);
 			viewer('/reservations/availability.asp','','24');
 		
 			me._log("REFRESHING");
-			me.actionDetected();
+			actionDetected();
 		}
 		else {
 			me._log("NOT REFRESHING - SAVE PRESENT");
-			me.actionDetected();
+			actionDetected();
 		}
+	};
+
+	var initiateHeartbeat = function() {
+		me._log("initiating heartbeat...");
+		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { actionDetected(); });
+		
+		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { actionDetected(); });
+		
+		jQuery("iframe#califrame").load(function(){
+			jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { actionDetected(); });
+		});
+	};
+
+	var cancelHeartbeat = function() {
+		me._log("canceling heartbeat");
+		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);	
+		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);
+	};
+
+	me.getRefreshInterval = function() {
+		return REFRESH_INTERVAL_MILLISECONDS;
+	};
+	
+	me.getIdleInterval = function() {
+		return IDLE_THRESHOLD_MILLISECONDS;
 	};
 
 	me._pageChangeEventHandler = function(e) {
@@ -444,25 +461,8 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 	
 	me._ajaxStateChangeEventHandler = function(e) {
 		if (me.isEnabled() && ResKey.HelperUtility.currentlyOnAvailabilityTab()) {
-			jQuery("iframe#califrame").contents().off("click."+me._className+" keydown."+me._className+" keyup."+me._className).on("click."+me._className+" keydown."+me._className+" keyup."+me._className, me.actionDetected);
+			jQuery("iframe#califrame").contents().off("click."+me._className+" keydown."+me._className+" keyup."+me._className).on("click."+me._className+" keydown."+me._className+" keyup."+me._className, actionDetected);
 		}
-	};
-	
-	me.initiateHeartbeat = function() {
-		me._log("initiating heartbeat...");
-		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { me.actionDetected(); });
-		
-		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { me.actionDetected(); });
-		
-		jQuery("iframe#califrame").load(function(){
-			jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { me.actionDetected(); });
-		});
-	};
-
-	me.cancelHeartbeat = function() {
-		me._log("canceling heartbeat");
-		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);	
-		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);
 	};
 
 	me._enable = function() {
@@ -475,15 +475,15 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 	
 	me._turnOn = function() {
 		me._attachToAjaxStateChange();
-		me.initiateHeartbeat();
-		me.awaitIdleState();
+		initiateHeartbeat();
+		awaitIdleState();
 	};
 	
 	me._turnOff = function() {
 		me._detachFromAjaxStateChange();
 		setTimeout(function(){
-			me.cancelHeartbeat();
-			me.cancelTimers(); 
+			cancelHeartbeat();
+			cancelTimers(); 
 		}, 100); //using setTimeout to solve most queuing issues
 	};
 	
