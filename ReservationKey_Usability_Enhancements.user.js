@@ -58,6 +58,7 @@ console.log("starting ResKey GM script...");
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
 	this.ENABLE_LOGGING = true;
+	this.ENABLE_MODULE_LOGGING_DEFAULT = false;
 	this.ALLOW_EXPERIMENTAL_MODULES = true;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
@@ -70,12 +71,12 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_ON_VALUE = 1;
 	this.COOKIE_MODULE_OFF_VALUE = 0;
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
-	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: true, module_name: "", module_name_readable: "", module_description: "" };
+	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: this.ENABLE_MODULE_LOGGING_DEFAULT, module_name: "", module_name_readable: "", module_description: "" };
 	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser" ];
 	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory" ];
 	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
 							"AutoRefresh" : { logging: true },
-							"BillingAddressParser" : { logging: true, default_country: this.DEFAULT_BILLING_COUNTRY }
+							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
 	};
 });
 /****END Settings****/
