@@ -58,6 +58,7 @@ console.log("starting ResKey GM script...");
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
 	this.ENABLE_LOGGING = true;
+	this.ENABLE_MODULE_LOGGING_DEFAULT = false;
 	this.ALLOW_EXPERIMENTAL_MODULES = true;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
@@ -70,12 +71,12 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_ON_VALUE = 1;
 	this.COOKIE_MODULE_OFF_VALUE = 0;
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
-	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: true, module_name: "", module_name_readable: "", module_description: "" };
+	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: this.ENABLE_MODULE_LOGGING_DEFAULT, module_name: "", module_name_readable: "", module_description: "" };
 	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser" ];
 	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory" ];
 	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
 							"AutoRefresh" : { logging: true },
-							"BillingAddressParser" : { logging: true, default_country: this.DEFAULT_BILLING_COUNTRY }
+							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
 	};
 });
 /****END Settings****/
@@ -384,15 +385,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 	var refreshTimer;
 	var idleTimer;
 	
-	me.getRefreshInterval = function() {
-		return REFRESH_INTERVAL_MILLISECONDS;
-	};
-	
-	me.getIdleInterval = function() {
-		return IDLE_THRESHOLD_MILLISECONDS;
-	};
-	
-	me.cancelTimers = function() {
+	var cancelTimers = function() {
 		if (idleTimer != null) {
 			clearTimeout(idleTimer);
 		}
@@ -401,41 +394,66 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 		}
 	};
 
-	me.actionDetected = function() {
+	var actionDetected = function() {
 		if (me.isEnabled() && ResKey.HelperUtility.currentlyOnAvailabilityTab()) {
 			me._log("action detected");
-			me.cancelTimers();
-			me.awaitIdleState();		
+			cancelTimers();
+			awaitIdleState();		
 		}
 		else {
-			me.cancelTimers();
+			cancelTimers();
 		}
 		return true;
 	};
 
-	me.awaitIdleState = function() {
+	var awaitIdleState = function() {
 		me._log("awaiting idle state");
-		idleTimer = setTimeout(function() { me.setRefreshTimer(); }, IDLE_THRESHOLD_MILLISECONDS);
+		idleTimer = setTimeout(function() { setRefreshTimer(); }, IDLE_THRESHOLD_MILLISECONDS);
 	};
 
-	me.setRefreshTimer = function() {
+	var setRefreshTimer = function() {
 		me._log("setting refresh timer");
-		refreshTimer = setInterval(function(){ me.autoRefresh(); }, REFRESH_INTERVAL_MILLISECONDS);
+		refreshTimer = setInterval(function(){ autoRefresh(); }, REFRESH_INTERVAL_MILLISECONDS);
 	};
 
-	me.autoRefresh = function () {
+	var autoRefresh = function () {
 		me._log("autorefresh state");
 		if (!$('save')) {
 			ResKey.HookHelper.setOldState(0);
 			viewer('/reservations/availability.asp','','24');
 		
 			me._log("REFRESHING");
-			me.actionDetected();
+			actionDetected();
 		}
 		else {
 			me._log("NOT REFRESHING - SAVE PRESENT");
-			me.actionDetected();
+			actionDetected();
 		}
+	};
+
+	var initiateHeartbeat = function() {
+		me._log("initiating heartbeat...");
+		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { actionDetected(); });
+		
+		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { actionDetected(); });
+		
+		jQuery("iframe#califrame").load(function(){
+			jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { actionDetected(); });
+		});
+	};
+
+	var cancelHeartbeat = function() {
+		me._log("canceling heartbeat");
+		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);	
+		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);
+	};
+
+	me.getRefreshInterval = function() {
+		return REFRESH_INTERVAL_MILLISECONDS;
+	};
+	
+	me.getIdleInterval = function() {
+		return IDLE_THRESHOLD_MILLISECONDS;
 	};
 
 	me._pageChangeEventHandler = function(e) {
@@ -444,25 +462,8 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 	
 	me._ajaxStateChangeEventHandler = function(e) {
 		if (me.isEnabled() && ResKey.HelperUtility.currentlyOnAvailabilityTab()) {
-			jQuery("iframe#califrame").contents().off("click."+me._className+" keydown."+me._className+" keyup."+me._className).on("click."+me._className+" keydown."+me._className+" keyup."+me._className, me.actionDetected);
+			jQuery("iframe#califrame").contents().off("click."+me._className+" keydown."+me._className+" keyup."+me._className).on("click."+me._className+" keydown."+me._className+" keyup."+me._className, actionDetected);
 		}
-	};
-	
-	me.initiateHeartbeat = function() {
-		me._log("initiating heartbeat...");
-		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { me.actionDetected(); });
-		
-		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { me.actionDetected(); });
-		
-		jQuery("iframe#califrame").load(function(){
-			jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { me.actionDetected(); });
-		});
-	};
-
-	me.cancelHeartbeat = function() {
-		me._log("canceling heartbeat");
-		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);	
-		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);
 	};
 
 	me._enable = function() {
@@ -475,15 +476,15 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 	
 	me._turnOn = function() {
 		me._attachToAjaxStateChange();
-		me.initiateHeartbeat();
-		me.awaitIdleState();
+		initiateHeartbeat();
+		awaitIdleState();
 	};
 	
 	me._turnOff = function() {
 		me._detachFromAjaxStateChange();
 		setTimeout(function(){
-			me.cancelHeartbeat();
-			me.cancelTimers(); 
+			cancelHeartbeat();
+			cancelTimers(); 
 		}, 100); //using setTimeout to solve most queuing issues
 	};
 	
