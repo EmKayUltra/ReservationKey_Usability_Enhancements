@@ -35,8 +35,8 @@
 
 
 ### Code Review
-- [ ] standardize "_" prefix and me. vs var for all; move attach/unattach to basemodule?
+- [X] standardize "_" prefix and me. vs var for all; move attach/unattach to basemodule?
 - [ ] AutoRefresh - review autoRefresh logic
-- [ ] HookHelper
-- [ ] EnhancementsController
-- [ ] UsabilityEnhancements
+- [X] HookHelper
+- [X] EnhancementsController
+- [X] UsabilityEnhancements
