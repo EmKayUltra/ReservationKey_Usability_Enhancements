@@ -1,12 +1,11 @@
 ## Now
 
-
 ### New Modules
 - [X] better billing address parsing - v1.1
 
 
 ### Features
-- [X] BillingAddressParser - click "use guest address" cause parser to run - v1.2
+- [X] BillingAddressParser - click "use guest address" cause parser to run - v1.1.1
 
  
 ### Bugs
@@ -17,7 +16,6 @@
 ### Code Review
 
 
-
 ## Later
 
 
@@ -26,8 +24,27 @@
 
 
 ### Features
+
+
+### Bugs
+
+
+### Code Review
+- [X] standardize "_" prefix and me. vs var for all; move attach/unattach to basemodule? - v1.1.1
+- [ ] AutoRefresh - review autoRefresh logic
+- [X] HookHelper - v1.1.1
+- [X] EnhancementsController - v1.1.1
+- [X] UsabilityEnhancements - v1.1.1
+
+
+## Shelved
+
+### New Modules
+
+
+### Features
 - [ ] HookHelper - change the way we hook into ajax events if possible instead of polling
-- [ ] HookHelper - the way we sense page changes - potentially sense pages by hooking into "viewer" functions - SHELVED, as it currently works 
+- [ ] HookHelper - the way we sense page changes - potentially sense pages by hooking into "viewer" functions
 - [ ] AutoRefresh - Calculate difference in table and update rather than fully reload autorefresh (phase 1 - only refresh if there IS a difference) - I believe this may be impossible
 
 
@@ -35,8 +52,3 @@
 
 
 ### Code Review
-- [X] standardize "_" prefix and me. vs var for all; move attach/unattach to basemodule?
-- [ ] AutoRefresh - review autoRefresh logic
-- [X] HookHelper
-- [X] EnhancementsController
-- [X] UsabilityEnhancements
