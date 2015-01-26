@@ -10,7 +10,7 @@
 // @require    http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js
 // @require    http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js
 // @require    https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js
-// @version    1.1.1
+// @version    1.1
 // @grant      none
 // ==/UserScript==
 /* NOTE: "@include" very specific (no general-case asterixes, etc) because otherwise all of this loads for every AJAX call as well */
@@ -29,7 +29,7 @@ Enjoy!
 $.noConflict();  //no need to overwrite ResKey's existing $ function - we'll just call "jQuery" whenever we need jQuery functionality
 console.log("starting ResKey GM script...");
 
-/****BEGIN NamespaceUtility****/
+/****BEGIN GENERAL HELPERS****/
 (function () {
     var NamespaceUtility = new function() {
         var me = this;
@@ -51,15 +51,11 @@ console.log("starting ResKey GM script...");
 
     NamespaceUtility.RegisterClass("Utils", "NamespaceUtility", NamespaceUtility);
 })();
-/****END NamespaceUtility****/
 
-
-/****BEGIN Settings****/
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
-	this.ENABLE_LOGGING = true;
-	this.ENABLE_MODULE_LOGGING_DEFAULT = false;
-	this.ALLOW_EXPERIMENTAL_MODULES = true;
+	this.ENABLE_LOGGING = false;
+	this.ALLOW_EXPERIMENTAL_MODULES = false;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
 	this.DEFAULT_BILLING_COUNTRY = "US"; //this must be the two letter representation of the country as ResKey understands it
@@ -71,18 +67,15 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_ON_VALUE = 1;
 	this.COOKIE_MODULE_OFF_VALUE = 0;
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
-	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: this.ENABLE_MODULE_LOGGING_DEFAULT, module_name: "", module_name_readable: "", module_description: "" };
+	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: false, module_name: "", module_name_readable: "", module_description: "" };
 	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser" ];
-	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory" ];
+	this.MODULES_LIST_EXPERIMENTAL = [ "AjaxHistory", "AutoRefresh" ];
 	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
 							"AutoRefresh" : { logging: true },
-							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
+							"BillingAddressParser" : { logging: true, default_country: this.DEFAULT_BILLING_COUNTRY }
 	};
 });
-/****END Settings****/
 
-
-/****BEGIN HelperUtility****/
 Utils.NamespaceUtility.RegisterClass("ResKey", "HelperUtility", new function(){
 	var me = this;
 	
@@ -194,10 +187,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ModuleFactory", new func
 		}
 	};
 });
-/****END HelperUtility****/
+/****END GENERAL HELPERS****/
 
 
-/****BEGIN ModuleBase****/
+/****BEGIN MODULEBASE****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ModuleBase", function(o){
 	this._moduleName;
 	this._moduleNameReadable
@@ -235,40 +228,6 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ModuleBase", function(o)
 	
 	this._init(o);
 });
-
-ResKey.Modules.ModuleBase.prototype.pageChangeEventHandler = function(e) {
-	this._log("page change detected");
-	this._pageChangeEventHandler(e);
-};
-
-ResKey.Modules.ModuleBase.prototype.attachToPageEvents = function() {
-	this._log("attaching to page events...");
-	jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, this.pageChangeEventHandler);
-	this._attachToPageEvents();
-};
-
-ResKey.Modules.ModuleBase.prototype.detachFromPageEvents = function() {
-	this._log("detaching from page events");
-	jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName);
-	this._detachFromPageEvents();
-};
-
-ResKey.Modules.ModuleBase.prototype.ajaxStateChangeEventHandler = function(e) {
-	this._log("ajax state change detected");
-	this._ajaxStateChangeEventHandler(e);
-};
-
-ResKey.Modules.ModuleBase.prototype.attachToAjaxStateChange = function() {
-	this._log("attaching to AJAX state change...");
-	jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, this.ajaxStateChangeEventHandler);
-	this._attachToAjaxStateChange();
-};
-
-ResKey.Modules.ModuleBase.prototype.detachFromAjaxStateChange = function() {
-	this._log("detaching from AJAX state change");
-	jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName);
-	this._detachFromAjaxStateChange();
-};
 
 ResKey.Modules.ModuleBase.prototype.turnOn = function() {
 	this._log("turning on...");
@@ -325,17 +284,6 @@ ResKey.Modules.ModuleBase.prototype.turnOnOrOffBasedOnCurrentPage = function() {
 		this.turnOff();
 	}
 };
-ResKey.Modules.ModuleBase.prototype._pageChangeEventHandler = function() {};
-
-ResKey.Modules.ModuleBase.prototype._attachToPageEvents = function() {};
-
-ResKey.Modules.ModuleBase.prototype._detachFromPageEvents = function() {};
-
-ResKey.Modules.ModuleBase.prototype._ajaxStateChangeEventHandler = function() {};
-
-ResKey.Modules.ModuleBase.prototype._attachToAjaxStateChange = function() {};
-
-ResKey.Modules.ModuleBase.prototype._detachFromAjaxStateChange = function() {};
 
 ResKey.Modules.ModuleBase.prototype._enable = function() {};
 
@@ -348,17 +296,23 @@ ResKey.Modules.ModuleBase.prototype._turnOff = function() {};
 ResKey.Modules.ModuleBase.prototype._isOnRelevantPage = function() { return true; };
 
 ResKey.Modules.ModuleBase.prototype._initializeModule = function() {};
-/****END ModuleBase****/
+/****END MODULEBASE****/
 
 
-/****BEGIN ForceHttps****/
+/****BEGIN FORCEHTTPS****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ForceHttps", function(o){
 	var me = this;
+	
+	me._enable = function() {};
+	
+	me._disable = function() {};
 	
 	me._turnOn = function() {
 		if (window.location.protocol != "https:") window.location.href = "https:" + window.location.href.substring(window.location.protocol.length);
 	};
-		
+	
+	me._turnOff = function() {};
+	
 	me._isOnRelevantPage = function() {
 		return true;
 	};
@@ -374,10 +328,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ForceHttps", function(o)
 });
 ResKey.Modules.ForceHttps.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
 ResKey.Modules.ForceHttps.prototype.constructor = ResKey.Modules.ForceHttps;
-/****END ForceHttps****/
+/****END FORCEHTTPS****/
 
 
-/****BEGIN AutoRefresh****/
+/****BEGIN AUTOREFRESH****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o){
 	var me = this;
 	var REFRESH_INTERVAL_MILLISECONDS = 30000; //refresh every 30 seconds (initiated by idle state, canceled by active state)
@@ -385,7 +339,15 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 	var refreshTimer;
 	var idleTimer;
 	
-	var cancelTimers = function() {
+	me.getRefreshInterval = function() {
+		return REFRESH_INTERVAL_MILLISECONDS;
+	};
+	
+	me.getIdleInterval = function() {
+		return IDLE_THRESHOLD_MILLISECONDS;
+	};
+	
+	me._cancelTimers = function() {
 		if (idleTimer != null) {
 			clearTimeout(idleTimer);
 		}
@@ -394,97 +356,106 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 		}
 	};
 
-	var actionDetected = function() {
+	me._actionDetected = function() {
 		if (me.isEnabled() && ResKey.HelperUtility.currentlyOnAvailabilityTab()) {
 			me._log("action detected");
-			cancelTimers();
-			awaitIdleState();		
+			me._cancelTimers();
+			me._awaitIdleState();		
 		}
 		else {
-			cancelTimers();
+			me._cancelTimers();
 		}
 		return true;
 	};
 
-	var awaitIdleState = function() {
+	me._awaitIdleState = function() {
 		me._log("awaiting idle state");
-		idleTimer = setTimeout(function() { setRefreshTimer(); }, IDLE_THRESHOLD_MILLISECONDS);
+		idleTimer = setTimeout(function() { me._setRefreshTimer(); }, IDLE_THRESHOLD_MILLISECONDS);
 	};
 
-	var setRefreshTimer = function() {
+	me._setRefreshTimer = function() {
 		me._log("setting refresh timer");
-		refreshTimer = setInterval(function(){ autoRefresh(); }, REFRESH_INTERVAL_MILLISECONDS);
+		refreshTimer = setInterval(function(){ me._autoRefresh(); }, REFRESH_INTERVAL_MILLISECONDS);
 	};
 
-	var autoRefresh = function () {
+	me._autoRefresh = function () {
 		me._log("autorefresh state");
 		if (!$('save')) {
 			ResKey.HookHelper.setOldState(0);
 			viewer('/reservations/availability.asp','','24');
 		
 			me._log("REFRESHING");
-			actionDetected();
+			me._actionDetected();
 		}
 		else {
 			me._log("NOT REFRESHING - SAVE PRESENT");
-			actionDetected();
+			me._actionDetected();
 		}
 	};
 
-	var initiateHeartbeat = function() {
-		me._log("initiating heartbeat...");
-		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { actionDetected(); });
-		
-		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { actionDetected(); });
-		
-		jQuery("iframe#califrame").load(function(){
-			jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { actionDetected(); });
+	me._attachToPageEvents = function() {
+		me._log("attaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName, function(e){
+			ResKey.HelperUtility.log("AUTOREFRESH detected page change.");
+			me.turnOnOrOffBasedOnCurrentPage();
+		});	
+	};
+
+	me._unattachToPageEvents = function() {
+		me._log("unattaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName);	
+	};
+	
+	me._attachToAjaxStateChange = function() {
+		me._log("attaching to ajax state change...");
+		jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName).on("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName, function(e){
+			if (me.isEnabled() && ResKey.HelperUtility.currentlyOnAvailabilityTab()) {
+				jQuery("iframe#califrame").contents().off("click."+me._className+" keydown."+me._className+" keyup."+me._className).on("click."+me._className+" keydown."+me._className+" keyup."+me._className, me._actionDetected);
+			}
 		});
 	};
 
-	var cancelHeartbeat = function() {
+	me._unattachToAjaxStateChange = function() {
+		me._log("unattaching to ajax state change...");
+		jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName);
+	};
+	
+	me._initiateHeartbeat = function() {
+		me._log("initiating heartbeat...");
+		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { me._actionDetected(); });
+		
+		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { me._actionDetected(); });
+		
+		jQuery("iframe#califrame").load(function(){
+			jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName).on("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName, function() { me._actionDetected(); });
+		});
+	};
+
+	me._cancelHeartbeat = function() {
 		me._log("canceling heartbeat");
 		jQuery(document).off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);	
 		jQuery("iframe#califrame").contents().off("click."+me._eventName+" keydown."+me._eventName+" keyup."+me._eventName);
 	};
 
-	me.getRefreshInterval = function() {
-		return REFRESH_INTERVAL_MILLISECONDS;
-	};
-	
-	me.getIdleInterval = function() {
-		return IDLE_THRESHOLD_MILLISECONDS;
-	};
-
-	me._pageChangeEventHandler = function(e) {
-		me.turnOnOrOffBasedOnCurrentPage();
-	};
-	
-	me._ajaxStateChangeEventHandler = function(e) {
-		if (me.isEnabled() && ResKey.HelperUtility.currentlyOnAvailabilityTab()) {
-			jQuery("iframe#califrame").contents().off("click."+me._className+" keydown."+me._className+" keyup."+me._className).on("click."+me._className+" keydown."+me._className+" keyup."+me._className, actionDetected);
-		}
-	};
-
 	me._enable = function() {
-		me.attachToPageEvents();
+		me._attachToPageEvents();
 	};
 	
 	me._disable = function() {
-		me.detachFromPageEvents();
+		me._unattachToPageEvents();
 	};
 	
 	me._turnOn = function() {
 		me._attachToAjaxStateChange();
-		initiateHeartbeat();
-		awaitIdleState();
+		me._initiateHeartbeat();
+		me._awaitIdleState();
 	};
 	
 	me._turnOff = function() {
-		me._detachFromAjaxStateChange();
+		me._unattachToAjaxStateChange();
 		setTimeout(function(){
-			cancelHeartbeat();
-			cancelTimers(); 
+			me._cancelHeartbeat();
+			me._cancelTimers(); 
 		}, 100); //using setTimeout to solve most queuing issues
 	};
 	
@@ -503,25 +474,57 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 });
 ResKey.Modules.AutoRefresh.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
 ResKey.Modules.AutoRefresh.prototype.constructor = ResKey.Modules.AutoRefresh;
-/*****END AutoRefresh*****/
+/*****END AUTOREFRESH*****/
 
 
-/*****BEGIN AutoReminders*****/
+/*****BEGIN REMINDERS*****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoReminders", function(o){
 	var me = this;
 
-	me.showMyReminders = function() {
+	me._showMyReminders = function() {
 		me._log("opening reminders");
-
+		//opendiv('resinfowindow','/inc/viewreminders.asp'); //has issues w/ timing so sometimes doesn't load properly
+		
+		//jQuery("#resinfowindow").css("top", "auto").css("left", "auto").css("bottom", 25).css("right", 15).css("height", 125).css("overflow-y","auto").show();
+		
+		//THIS WINDOW USED FOR OTHER THINGS, CANT JUST MOVE IT
+		//jQuery("#resinfowindow").css("height", 125).css("overflow-y","auto").css("top", (jQuery(window).height()-jQuery("#resinfowindow").height()-25)+"px").css("left", (jQuery(window).width()-jQuery("#resinfowindow").width()-25)+"px").show();
+		
 		jQuery("#resinfowindow").load("/inc/viewreminders.asp").show();
+		
+		//jQuery("#resinfowindow").load("/inc/viewreminders.asp", function(){
+			//jQuery("#resinfowindow a:contains('Close')").attr("onclick", "").off("click");
+			//jQuery("#resinfowindow a:contains('Move')").attr("onmousedown", "").off("mousedown");
+			//jQuery("#resinfowindow").css("top", "auto").css("left", "auto").css("bottom", 25).css("right", 15).css("height", 125).css("overflow-y","auto").show();
+			/*jQuery("#resinfowindow").wrap("<div id='resinfowindowdialog' style='display: none; backgroundc'></div>");
+			jQuery("#resinfowindow").show();
+			jQuery("#resinfowindowdialog").dialog({
+				title: "Reminders",
+				width: 750, 
+				height: 300
+			});*/
+		//});
 	};
 	
+	me._enable = function() {};
+	
+	me._disable = function() {};
+	
 	me._turnOn = function() {
+		/*jQuery("div:visible[style*='sticky']").data("onclick", jQuery("div:visible[style*='sticky']").attr("onclick");
+		jQuery("div:visible[style*='sticky']").attr("onclick", null).off("click."+me._eventName).on("click."+me._eventName, function() {
+			me._showMyReminders();
+		});
+		*/
 		if (jQuery("div:visible[style*='sticky'] span").text() > 0) {
-			me.showMyReminders();
+			me._showMyReminders();
 		}
 	};
-		
+	
+	me._turnOff = function() {
+		//jQuery("div:visible[style*='sticky']").off("click."+me._eventName).attr("onclick", jQuery("div:visible[style*='sticky']").data("onclick"));
+	};
+	
 	me._isOnRelevantPage = function() {
 		return true;
 	};
@@ -537,88 +540,143 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoReminders", function
 });
 ResKey.Modules.AutoReminders.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
 ResKey.Modules.AutoReminders.prototype.constructor = ResKey.Modules.AutoReminders;
-/*****END AutoReminders******/
+/*****END REMINDERS******/
 
 
-/****BEGIN DoublePaymentPrevention****/
+/****BEGIN DOUBLEPAYMENTPREVENTION****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "DoublePaymentPrevention", function(o){
 	var me = this;
 	
-	me._pageChangeEventHandler = function(e) {
-		me.turnOnOrOffBasedOnCurrentPage();
+	var attachToPageEvents = function() {
+		me._log("attaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName, function(e){
+			me._log("detected page change");
+			me.turnOnOrOffBasedOnCurrentPage();
+		});
 	};
 	
-	me._ajaxStateChangeEventHandler = function(e) {
-		ResKey.HelperUtility.preventFutureInlineOnClickForAnchor(jQuery("#pricedetails_div a:contains('Remove')"));
+	var unattachToPageEvents = function() {
+		me._log("unattaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName);
+	};
+	
+	var attachToAjaxStateChange = function() {
+		me._log("attaching to ajax state change...");
+		jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName).on("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName, function(e){
+			me._log("detected ajax state change");
+			ResKey.HelperUtility.preventFutureInlineOnClickForAnchor(jQuery("#pricedetails_div a:contains('Remove')"));
+				
+			// jQuery(document).off("click."+me._eventName, "#pricedetails_div a:contains('Remove')").on("click."+me._eventName, "#pricedetails_div a:contains('Remove')", function(e) {
+				// if (e.which == 1) {
+					// jQuery(this).disable();
+					// if (confirm("Remove payment?")){
+						// ResKey.HelperUtility.executeInlineOnClickForAnchor(this, e);
+					// }
+					// else {
+						// jQuery(this).enable();
+					// }
+					// //THIS DOESNT STOP THE ONCLICK FROM HAPPENING
+					// e.stopPropagation();
+					// e.preventDefault();
+					// return false;
+				// }
+			// });
+		});
 	};
 
+	var unattachToAjaxStateChange = function() {
+		me._log("unattaching to ajax state change...");
+		jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName);
+	};
+	
 	me._enable = function() {
-		me.attachToPageEvents();
+		attachToPageEvents();
 	};
 	
 	me._disable = function() {
-		me.detachFromPageEvents();
+		unattachToPageEvents();
 	};
 	
 	me._turnOn = function() {		
-		me.attachToAjaxStateChange();
+		attachToAjaxStateChange();
+		//if (ResKey.HelperUtility.currentlyOnReservationsTab()) {
+			// jQuery(document).on("click.gm", "#pricedetails_div #button_addpayment", function(){ //for whatever reason, this isn't being properly added dynamically...probably because of dynamic overwriting of the handler
+				// jQuery(this).disable();
+				// ResKey.HelperUtility.log("payment clicked");
+				// return false;
+			// });
 			
-		jQuery(document).off("mouseup."+me._eventName, "#button_addpayment").on("mouseup."+me._eventName, "#button_addpayment", function(e){ 
-			if (e.which == 1) {
-				jQuery(this).disable();
-				
-				if (confirm("Make payment?")) {
-					ResKey.HelperUtility.executeDefaultOnClick(this);
+			jQuery(document).off("mouseup."+me._eventName, "#button_addpayment").on("mouseup."+me._eventName, "#button_addpayment", function(e){ 
+				if (e.which == 1) {
+					jQuery(this).disable();
+					
+					if (confirm("Make payment?")) {
+						ResKey.HelperUtility.executeDefaultOnClick(this);
+					}
+					else {
+						jQuery(this).enable();
+						ResKey.HelperUtility.preventDefaultOnClick(this);
+					}
+					//THIS DOESNT STOP THE ONCLICK FROM HAPPENING
+					e.stopPropagation();
+					e.preventDefault();
+					return false;
 				}
-				else {
-					jQuery(this).enable();
-					ResKey.HelperUtility.preventDefaultOnClick(this);
-				}
-				return false;
-			}
-		});
-		
-		jQuery(document).off("mouseup."+me._eventName, "#button_chargecard").on("mouseup."+me._eventName, "#button_chargecard", function(e){
-			if (e.which == 1) {
-				jQuery(this).disable();
+			});
+			
+			jQuery(document).off("mouseup."+me._eventName, "#button_chargecard").on("mouseup."+me._eventName, "#button_chargecard", function(e){
+				if (e.which == 1) {
+					jQuery(this).disable();
 
-				if (confirm("Charge card " + $('idcontactcc_charge_temp').value + "?")){
-					ResKey.HelperUtility.executeDefaultOnClick(this);
+					if (confirm("Charge card " + $('idcontactcc_charge_temp').value + "?")){
+						ResKey.HelperUtility.executeDefaultOnClick(this);
+					}
+					else {
+						jQuery(this).enable();
+						ResKey.HelperUtility.preventDefaultOnClick(this);
+					}
+					//THIS DOESNT STOP THE ONCLICK FROM HAPPENING
+					e.stopPropagation();
+					e.preventDefault();
+					return false;
 				}
-				else {
-					jQuery(this).enable();
-					ResKey.HelperUtility.preventDefaultOnClick(this);
+			});
+			
+			//solution: remove onclick on these anchors (when...?), save them to data("onclick"), then call:
+			//eval("("+$(this).data("onclick")+")();");
+			//http://stackoverflow.com/questions/1756425/prevent-onclick-action-with-jquery
+			jQuery(document).off("click."+me._eventName, "#pricedetails_div a:contains('Remove')").on("click."+me._eventName, "#pricedetails_div a:contains('Remove')", function(e) {
+				if (e.which == 1) {
+					jQuery(this).disable();
+					if (confirm("Remove payment?")){
+						ResKey.HelperUtility.executeInlineOnClickForAnchor(this, e);
+					}
+					else {
+						jQuery(this).enable();
+					}
+					//THIS DOESNT STOP THE ONCLICK FROM HAPPENING
+					e.stopPropagation();
+					e.preventDefault();
+					return false;
 				}
-				return false;
-			}
-		});
-		
-		//solution: remove onclick on these anchors (when...?), save them to data("onclick"), then call: eval("("+$(this).data("onclick")+")();"); ( http://stackoverflow.com/questions/1756425/prevent-onclick-action-with-jquery )
-		jQuery(document).off("click."+me._eventName, "#pricedetails_div a:contains('Remove')").on("click."+me._eventName, "#pricedetails_div a:contains('Remove')", function(e) {
-			if (e.which == 1) {
-				jQuery(this).disable();
-				if (confirm("Remove payment?")){
-					ResKey.HelperUtility.executeInlineOnClickForAnchor(this, e);
+			});
+			
+			jQuery(document).off("click."+me._eventName, "#pricedetails_div a:contains('Refund')").on("click."+me._eventName, "#pricedetails_div a:contains('Refund')", function(e) {
+				if (e.which == 1) {
+					jQuery(this).disable();
+					if (confirm("Refund payment?")){
+						ResKey.HelperUtility.executeInlineOnClickForAnchor(this, e);
+					}
+					else {
+						jQuery(this).enable();
+					}
+					//THIS DOESNT STOP THE ONCLICK FROM HAPPENING
+					e.stopPropagation();
+					e.preventDefault();
+					return false;
 				}
-				else {
-					jQuery(this).enable();
-				}
-				return false;
-			}
-		});
-		
-		jQuery(document).off("click."+me._eventName, "#pricedetails_div a:contains('Refund')").on("click."+me._eventName, "#pricedetails_div a:contains('Refund')", function(e) {
-			if (e.which == 1) {
-				jQuery(this).disable();
-				if (confirm("Refund payment?")){
-					ResKey.HelperUtility.executeInlineOnClickForAnchor(this, e);
-				}
-				else {
-					jQuery(this).enable();
-				}
-				return false;
-			}
-		});			
+			});			
+		//}
 	};
 	
 	me._turnOff = function() {
@@ -626,7 +684,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "DoublePaymentPrevention"
 		jQuery(document).off("mouseup."+me._eventName, "#button_chargecard");
 		jQuery(document).off("click."+me._eventName, "#pricedetails_div a:contains('Remove')");
 		jQuery(document).off("click."+me._eventName, "#pricedetails_div a:contains('Refund')");
-		me.detachFromAjaxStateChange();
+		unattachToAjaxStateChange();
 	};
 	
 	me._isOnRelevantPage = function() {
@@ -644,7 +702,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "DoublePaymentPrevention"
 });
 ResKey.Modules.DoublePaymentPrevention.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
 ResKey.Modules.DoublePaymentPrevention.prototype.constructor = ResKey.Modules.DoublePaymentPrevention;
-/****END DoublePaymentPrevention****/
+/****END DOUBLEPAYMENTPREVENTION****/
 
 /****BEGIN CreditCardTypeAutoSelector****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "CreditCardTypeAutoSelector", function(o){
@@ -668,16 +726,25 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "CreditCardTypeAutoSelect
 		}
 	};
 	
-	me._pageChangeEventHandler = function(e) {
-		me.turnOnOrOffBasedOnCurrentPage();
+	var attachToPageEvents = function() {
+		me._log("attaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName, function(e){
+			me._log("detected page change");
+			me.turnOnOrOffBasedOnCurrentPage();
+		});
+	};
+
+	var unattachToPageEvents = function() {
+		me._log("unattaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName);
 	};
 	
 	me._enable = function() {
-		me.attachToPageEvents();
+		attachToPageEvents();
 	};
 	
 	me._disable = function() {
-		me.detachFromPageEvents();
+		unattachToPageEvents();
 	};
 	
 	me._turnOn = function() {		
@@ -712,7 +779,7 @@ ResKey.Modules.CreditCardTypeAutoSelector.prototype.constructor = ResKey.Modules
 /****END CreditCardTypeAutoSelector****/
 
 
-/****BEGIN AjaxHistory****/
+/****BEGIN AJAXHISTORY****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o){
 	var me = this;
 	var pageHistory;
@@ -774,25 +841,37 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		jQuery(document).off("keydown."+me._className+" keypress."+me._className);
 	};
 	
-	me._ajaxStateChangeEventHandler = function(e) {	
-		savePage(previousPage);
-		savingPage = false;
+	var attachToAjaxStateChange = function() {	
+		me._log("attaching to ajax state change...");
+		jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName).on("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName, function(e){
+			savePage(previousPage);
+			savingPage = false;
+		});
 	};
 	
+	var unattachToAjaxStateChange = function() {
+		jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName);
+	};
 	
-	me._attachToPageEvents = function(e) {
-		savePage(previousPage);
-		savingPage = true;
+	var attachToPageEvents = function() {
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._className).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._className, function(e){
+			savePage(previousPage);
+			savingPage = true;
+		});
 	};	
+
+	var unattachToPageEvents = function() {
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._className);
+	};
 	
 	me._enable = function() {
-		me.attachToPageEvents();
-		me.attachToAjaxStateChange();
+		attachToPageEvents();
+		attachToAjaxStateChange();
 	};
 	
 	me._disable = function() {
-		me.detachFromAjaxStateChange();
-		me.detachFromPageEvents();
+		unattachToAjaxStateChange();
+		unattachToPageEvents();
 	};
 	
 	me._turnOn = function() {
@@ -842,7 +921,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		window.location.hash = '';
 		jQuery(document).off("mouseleave."+me._className);
 		jQuery(document).off("mouseover."+me._className);
-		me.detachFromAjaxStateChange();
+		unattachToAjaxStateChange();
 		unswallowBackspace();
 	};
 	
@@ -861,9 +940,9 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 });
 ResKey.Modules.AjaxHistory.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
 ResKey.Modules.AjaxHistory.prototype.constructor = ResKey.Modules.AjaxHistory;
-/****END AjaxHistory****/
+/****END AJAXHISTORY****/
 
-/****BEGIN BillingAddressParser****/
+/****BEGIN BILLINGADDRESSPARSER****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", function(o){
 	var me = this;
 	var defaultCountry;
@@ -976,47 +1055,46 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 		jQuery("#ccaddress").val(addressText);
 	};
 	
-	var parseContactAddressIntoBillingAddress = function(addressText) {
-		try {
-			createAddressObjectFromUserEnteredText(addressText);
-		
-			fillAddressFieldsFromAddress();
-			
-			return true;
-		}
-		catch(ex) { //fallback to old behavior if odd case encountered.
-			fillAddressNormally(addressText);
-			return true;
-		}
+	var attachToPageEvents = function() {
+		me._log("attaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName, function(e){
+			me._log("detected page change");
+			me.turnOnOrOffBasedOnCurrentPage();
+		});
 	};
 
-	me._pageChangeEventHandler = function(e) {
-		me.turnOnOrOffBasedOnCurrentPage();
+	var unattachToPageEvents = function() {
+		me._log("unattaching to pagechange events");
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+me._eventName);
 	};
 	
 	me._enable = function() {
-		me.attachToPageEvents();
+		attachToPageEvents();
 	};
 	
 	me._disable = function() {
-		me.detachFromPageEvents();
+		unattachToPageEvents();
 	};
 	
 	me._turnOn = function() {		
 		jQuery(document).off("blur."+me._eventName, "#address").on("blur."+me._eventName, "#address", function(e) {
 			me._log("blur detected with value: "+jQuery(this).val());
-			parseContactAddressIntoBillingAddress(jQuery(this).val());
-		});
-
-		jQuery(document).off("click."+me._eventName, "a:contains('contact address')").on("click."+me._eventName, "a:contains('contact address')", function(e){
-			me._log("'contact address' click detected");
-			parseContactAddressIntoBillingAddress(jQuery("#address").val());
+			try {
+				createAddressObjectFromUserEnteredText(jQuery(this).val());
+			
+				fillAddressFieldsFromAddress();
+				
+				return true;
+			}
+			catch(ex) { //fallback to old behavior if odd case encountered.
+				fillAddressNormally(jQuery(this).val());
+				return true;
+			}
 		});
 	};
 	
 	me._turnOff = function() {
 		jQuery(document).off("blur."+me._eventName, "#address");
-		jQuery(document).off("click."+me._eventName, "a:contains('contact address')");
 	};
 	
 	me._isOnRelevantPage = function() {
@@ -1034,10 +1112,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 });
 ResKey.Modules.BillingAddressParser.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
 ResKey.Modules.BillingAddressParser.prototype.constructor = ResKey.Modules.BillingAddressParser;
-/****END BillingAddressParser****/
+/****END BILLINGADDRESSPARSER****/
 
 
-/****BEGIN EnhancementsController****/
+/****BEGIN ENHANCEMENTS CONTROLLER****/
 Utils.NamespaceUtility.RegisterClass("ResKey", "EnhancementsController", new function(o){
 	var me = this;
 	var moduleList;
@@ -1116,10 +1194,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "EnhancementsController", new fun
 
 	init(o);
 });
-/****END EnhancementsController****/
+/****END ENHANCEMENTS CONTROLLER****/
 
 
-/****BEGIN HookHelper****/
+/****BEGIN SETUP****/
 Utils.NamespaceUtility.RegisterClass("ResKey", "HookHelper", new function(o){
 	var me = this;
 	var currentPage;
@@ -1142,6 +1220,12 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "HookHelper", new function(o){
 	};
 
 	var initAjaxHooks = function() {
+		//NO way to hook into this, as any event handler here just seems to get overwritten...maybe use jQuery and namespace it?
+		// var openFn = xmlHttp.open;
+		// xmlHttp.open = function(e) {
+			// ResKey.HelperUtility.log("opening ajax request");
+			// openFn();
+		// };
 		setInterval(determineAjaxState, ResKey.Settings.AJAXSTATE_POLLTIME_MILLISECONDS);
 	};
 
@@ -1163,6 +1247,23 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "HookHelper", new function(o){
 	var initPageChangeSensor = function() {
 		determineCurrentPage();
 		setInterval(determineCurrentPage, ResKey.Settings.CURRENTPAGE_POLLTIME_MILLISECONDS); //poll to look for page changes
+
+		// DOESN'T capture changing pages via links (like clicking a reservation) - or opening "quick view", etc
+		// jQuery("#sidebuttons a").parents("td[id*=t]:not([id=t27])").find("a").on("click.gm", function(){ //EXCLUDING report anchor
+			// previousPage = currentPage;
+			// currentPage = ResKey.HelperUtility.translateTdIDToPageName(jQuery(this).parents("td[id*=t]").attr("id"));
+			
+			// if (currentPage != previousPage) {
+				// pageChanged();
+			// }
+		// });
+		
+		// var viewerOld = viewer;
+		
+		// viewer = function(myurl,str,sidetabnum) {
+			// ResKey.HelperUtility.log("viewering...");
+			// viewerOld(myurl,str,sidetabnum);
+		// };
 	};
 	
 	me.getCurrentPage = function() { return currentPage; }
@@ -1180,10 +1281,8 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "HookHelper", new function(o){
 	
 	init(o);
 });
-/****END HookHelper****/
 
 
-/****BEGIN UsabilityEnhancements****/
 Utils.NamespaceUtility.RegisterClass("ResKey", "UsabilityEnhancements", new function(o){
 	var me = this;
 	var moduleList;
@@ -1236,9 +1335,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "UsabilityEnhancements", new func
 	
 	init(o);
 });
-/****END UsabilityEnhancements****/
 
+//jQuery("head").append('<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" rel="stylesheet" type="text/css">');
 
 jQuery(function(){
 	ResKey.UsabilityEnhancements.run();	
 });
+/****END SETUP****/
