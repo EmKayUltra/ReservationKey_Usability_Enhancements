@@ -58,7 +58,7 @@ console.log("starting ResKey GM script...");
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
 	this.ENABLE_LOGGING = true;
-	this.ENABLE_MODULE_LOGGING_DEFAULT = false;
+	this.ENABLE_MODULE_LOGGING_DEFAULT = true;
 	this.ALLOW_EXPERIMENTAL_MODULES = true;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
@@ -242,13 +242,13 @@ ResKey.Modules.ModuleBase.prototype.pageChangeEventHandler = function(e) {
 };
 
 ResKey.Modules.ModuleBase.prototype.attachToPageEvents = function() {
-	this._log("attaching to page events...");
-	jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, this.pageChangeEventHandler);
+	this._log("attaching to page events ("+"pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName+")...");
+	jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, jQuery.proxy(this.pageChangeEventHandler, this));
 	this._attachToPageEvents();
 };
 
 ResKey.Modules.ModuleBase.prototype.detachFromPageEvents = function() {
-	this._log("detaching from page events");
+	this._log("detaching from page events ("+"pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName+")");
 	jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName);
 	this._detachFromPageEvents();
 };
@@ -259,13 +259,13 @@ ResKey.Modules.ModuleBase.prototype.ajaxStateChangeEventHandler = function(e) {
 };
 
 ResKey.Modules.ModuleBase.prototype.attachToAjaxStateChange = function() {
-	this._log("attaching to AJAX state change...");
-	jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, this.ajaxStateChangeEventHandler);
+	this._log("attaching to AJAX state change ("+"ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName+")...");
+	jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, jQuery.proxy(this.ajaxStateChangeEventHandler, this));
 	this._attachToAjaxStateChange();
 };
 
 ResKey.Modules.ModuleBase.prototype.detachFromAjaxStateChange = function() {
-	this._log("detaching from AJAX state change");
+	this._log("detaching from AJAX state change ("+"ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName+")");
 	jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName);
 	this._detachFromAjaxStateChange();
 };
