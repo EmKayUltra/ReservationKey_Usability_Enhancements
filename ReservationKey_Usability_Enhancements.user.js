@@ -769,6 +769,12 @@ ResKey.Modules.CreditCardTypeAutoSelector.prototype.constructor = ResKey.Modules
 
 
 /****BEGIN AjaxHistory****/
+//TODO: FEATURE this needs to handle edge cases like opening a reservation from the calendar (which it does except for tab coloring)
+//TODO: FEATURE allow this to work across actual back actions (for instance, going from "website/*" pages to "properties/*" pages & back)
+//TODO: REVIEW MAYBE BUG this is using the AJAX state, which will probably result in some problems w/ autorefresh (maybe?)
+//TODO: REVIEW MAYBE BUG could this be causing multiple credit card processing or payments for instance, since we're using the ajax state change?
+//TODO: TEST all pages if possible, including forums
+//TODO: REFACTOR
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o){
 	var me = this;
 	var previousPage;
