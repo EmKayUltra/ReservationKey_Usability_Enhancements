@@ -73,10 +73,11 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
 	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: this.ENABLE_MODULE_LOGGING_DEFAULT, module_name: "", module_name_readable: "", module_description: "" };
 	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser" ];
-	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory" ];
-	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
-							"AutoRefresh" : { logging: true },
-							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
+	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory", "ReservationLinkBuilder" ];
+	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: false },
+							"AutoRefresh" : { logging: false },
+							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY },
+							"ReservationLinkBuilder": { logging: true }
 	};
 });
 /****END Settings****/
@@ -178,7 +179,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "HelperUtility", new function(){
 		return (ResKey.HookHelper.getCurrentPage() == "Activity");
 	};
 });
+/****END HelperUtility****/
 
+
+/****BEGIN ModuleFactory****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ModuleFactory", new function(){
 	this.getModule = function(moduleName, options) {
 		options = (typeof options == "undefined") ? ResKey.Settings.MODULE_DEFAULTS : options;
@@ -190,11 +194,56 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ModuleFactory", new func
 			case "AjaxHistory": return new ResKey.Modules.AjaxHistory(options);
 			case "CreditCardTypeAutoSelector": return new ResKey.Modules.CreditCardTypeAutoSelector(options);
 			case "BillingAddressParser": return new ResKey.Modules.BillingAddressParser(options);
+			case "ReservationLinkBuilder": return new ResKey.Modules.ReservationLinkBuilder(options);
 			default: return {};
 		}
 	};
 });
-/****END HelperUtility****/
+/****END ModuleFactory****/
+
+
+/****BEGIN AdvancedDataUtility****/
+Utils.NamespaceUtility.RegisterClass("ResKey", "AdvancedDataUtility", new function(){
+	var me = this;
+	var reservationPages = [];  //of type "ReservationPage"
+	var ReservationPage = { Name: "", AvailabilityURL: "", CalendarURL: ""};
+
+	me.getReservationPages = function() {
+		return reservationPages;
+	};
+
+	me.loadData = function() {
+		loadReservationPages();
+	};
+
+	var _log = function(text) {
+		ResKey.HelperUtility.log("AdvancedDataUtility: "+text);
+	};
+
+	var getRandomNumberForWSCall = function() {
+		return 1; //TODO
+	};
+
+	var loadReservationPages = function() {
+		_log("requesting reservation pages...");
+		jQuery.get("https://v2.reservationkey.com/web/reservationpages.asp?&sid="+getRandomNumberForWSCall(), parseReservationPagesOutOfResponse);
+	};
+
+	var parseReservationPagesOutOfResponse = function(responseText) {
+		var reservationPage; 
+		_log("reservation page response received, parsing...");
+		jQuery("table tbody tr:has('td.col')", responseText).each(function(){
+			reservationPage = Object.create(ReservationPage);
+			reservationPage.Name = jQuery("td.col:first", this).text();
+			reservationPage.AvailabilityURL = jQuery("td.col:eq(3) a:contains('Availability')", this).attr("href");
+			reservationPage.CalendarURL = jQuery("td.col:eq(3) a:contains('Calendar')", this).attr("href");
+			_log("reservation page parsed - "+reservationPage.Name+", '"+reservationPage.AvailabilityURL+"', '"+reservationPage.CalendarURL+"'");
+			reservationPages.push(reservationPage);
+		});
+	};
+});
+/****END AdvancedDataUtility****/
+
 
 
 /****BEGIN ModuleBase****/
@@ -475,13 +524,13 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AutoRefresh", function(o
 	};
 	
 	me._turnOn = function() {
-		me._attachToAjaxStateChange();
+		me.attachToAjaxStateChange();
 		initiateHeartbeat();
 		awaitIdleState();
 	};
 	
 	me._turnOff = function() {
-		me._detachFromAjaxStateChange();
+		me.detachFromAjaxStateChange();
 		setTimeout(function(){
 			cancelHeartbeat();
 			cancelTimers(); 
@@ -1029,6 +1078,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", f
 		}
 		defaultCountry = o.default_country;
 	};
+
 	o = jQuery.extend(o, { module_name: "BillingAddressParser", module_name_readable: "Billing Address Parser", module_description: "Parses City/State/Zip out of Contact Address into Billing Address fields for CC." });
 	ResKey.Modules.ModuleBase.call(me, o);
 });
@@ -1036,6 +1086,106 @@ ResKey.Modules.BillingAddressParser.prototype = Object.create(ResKey.Modules.Mod
 ResKey.Modules.BillingAddressParser.prototype.constructor = ResKey.Modules.BillingAddressParser;
 /****END BillingAddressParser****/
 
+
+/****BEGIN ReservationLinkBuilder****/
+Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ReservationLinkBuilder", function(o){
+	var me = this;
+	var HTML_CONTAINER_ID = "ResKey_ReservationLinkBuilder";
+	var RESERVATION_PAGE_DROPDOWN_ID = "ResKey_ReservationLinkBuilder_ReservationPage";
+	var RESERVATION_LINK_TEXTBOX_ID = "ResKey_ReservationLinkBuilder_ReservationLinkText";
+	var GENERATE_LINK_BUTTON_ID = "ResKey_ReservationLinkBuilder_ReservationLinkGenerationButton";
+
+	var createLinkBuildingUI = function() {
+		var html = 	"<div id='"+HTML_CONTAINER_ID+"' style='float: left; font-size: .75em;'> " +
+			"<span style='font-weight: bold;'>Pre-Booked Reservation Link Builder</span><br />" +
+			"<select id='"+RESERVATION_PAGE_DROPDOWN_ID+"' title='Select a reservation page to direct the guest to for this reservation' style='font-size: 1em; margin-left: 5px;'></select><br />" +
+			"<input type='text' id='"+RESERVATION_LINK_TEXTBOX_ID+"' title='Copy this link and send it to your guest' style='margin-left: 5px; width: 450px; font-size: 1em;' />" +
+			"<button id='"+GENERATE_LINK_BUTTON_ID+"' style='font-size: 1em;'>Create Link</button>" +
+		"</div>";
+
+		me._log("creating UI...");
+		jQuery(html).appendTo("#resdetails_head");
+
+		//add event handlers
+		var reservationPages = ResKey.AdvancedDataUtility.getReservationPages();
+		var currentReservationPage;
+		jQuery.each(reservationPages, function(i){
+			currentReservationPage = reservationPages[i];
+			me._log("adding reservation page "+currentReservationPage.Name+"...");
+			if (typeof currentReservationPage.AvailabilityURL != "undefined") {
+				jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID).append("<option value='"+currentReservationPage.AvailabilityURL+"'>"+currentReservationPage.Name+" - Availability</option>");
+			}
+			if (typeof currentReservationPage.CalendarURL != "undefined") {
+				jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID).append("<option value='"+currentReservationPage.CalendarURL+"'>"+currentReservationPage.Name+" - Calendar</option>");
+			}
+		});
+
+		jQuery(document).on("click."+this._eventName, "#"+GENERATE_LINK_BUTTON_ID, function(){
+			var reservationID = /Reservation Details: #([0-9]+)/.exec(jQuery("#resdetails_head h2").text())[1];
+			var arrivalDate = new Date(jQuery("#arrive_new").val());
+			var departureDate = new Date(jQuery("#depart_new").val());
+			var startDateAsMMDotDDDotYYYY = (arrivalDate.getMonth()+1)+"."+(arrivalDate.getDate())+"."+(arrivalDate.getFullYear());
+			var endDateAsMMDotDDDotYYYY = (departureDate.getMonth()+1)+"."+(departureDate.getDate())+"."+(departureDate.getFullYear());
+			var reservationURL = "";
+			if (jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID+" option:selected").text().indexOf("Availability") >= 0) {
+				reservationURL = jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID).val()+"/s|"+startDateAsMMDotDDDotYYYY+"|"+endDateAsMMDotDDDotYYYY+"/idr|"+reservationID
+			}
+			else if (jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID+" option:selected").text().indexOf("Calendar") >= 0) {
+				reservationURL = jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID).val()+"/s|"+startDateAsMMDotDDDotYYYY+"/idr|"+reservationID
+			}
+			jQuery("#"+RESERVATION_LINK_TEXTBOX_ID).val(reservationURL);
+		});
+	};
+
+	var removeLinkBuildingUI = function() {
+		jQuery("#"+HTML_CONTAINER_ID).remove();
+	};
+
+	me._pageChangeEventHandler = function(e) {
+		me.turnOnOrOffBasedOnCurrentPage();
+	};
+
+	me._ajaxStateChangeEventHandler = function(e) {
+		if (me.isEnabled() && ResKey.HelperUtility.currentlyOnReservationsTab()) {
+			if (jQuery("#"+HTML_CONTAINER_ID).length == 0) {
+				createLinkBuildingUI();	
+			}
+		}
+	};
+	
+	me._enable = function() {
+		me.attachToPageEvents();
+	};
+	
+	me._disable = function() {
+		me.detachFromPageEvents();
+	};
+	
+	me._turnOn = function() {		
+		me.attachToAjaxStateChange();	
+	};
+	
+	me._turnOff = function() {
+		me.detachFromAjaxStateChange();
+		removeLinkBuildingUI();
+	};
+	
+	me._isOnRelevantPage = function() {
+		return ResKey.HelperUtility.currentlyOnReservationsTab();
+	};
+	
+	me._initializeModule = function(o) {
+		if (me.isEnabled()) {
+			me._enable();
+		}
+	};
+
+	o = jQuery.extend(o, { module_name: "ReservationLinkBuilder", module_name_readable: "Reservation Link Builder", module_description: "Assists in the creation of a custom reservation link to share with potential guests." });
+	ResKey.Modules.ModuleBase.call(me, o);
+});
+ResKey.Modules.ReservationLinkBuilder.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
+ResKey.Modules.ReservationLinkBuilder.prototype.constructor = ResKey.Modules.ReservationLinkBuilder;
+/****END ReservationLinkBuilder*****/
 
 /****BEGIN EnhancementsController****/
 Utils.NamespaceUtility.RegisterClass("ResKey", "EnhancementsController", new function(o){
@@ -1217,7 +1367,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "UsabilityEnhancements", new func
 			ResKey.HelperUtility.log("page ready. beginning setup...");
 			
 			ResKey.HookHelper.start();
-			
+			ResKey.AdvancedDataUtility.loadData();
 			initModules();
 			ResKey.EnhancementsController.insertIntoPage(moduleList);
 		}
