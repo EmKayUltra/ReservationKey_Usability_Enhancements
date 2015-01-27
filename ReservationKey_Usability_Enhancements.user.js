@@ -6,12 +6,18 @@
 // @include    https://v2.reservationkey.com/reservations/
 // @include    http://v2.reservationkey.com/reservations/?*
 // @include    https://v2.reservationkey.com/reservations/?*
+// @include    http://v2.reservationkey.com/web/?*
+// @include    https://v2.reservationkey.com/web/?*
+// @include    http://v2.reservationkey.com/properties/?*
+// @include    https://v2.reservationkey.com/properties/?*
+// @include    http://v2.reservationkey.com/settings/?*
+// @include    https://v2.reservationkey.com/settings/?*
 // @resource   http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css
 // @require    http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js
 // @require    http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js
 // @require    https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js
 // @version    1.2
-// @grant      none
+// @grant 	   none
 // ==/UserScript==
 /* NOTE: "@include" very specific (no general-case asterixes, etc) because otherwise all of this loads for every AJAX call as well */
 
@@ -57,9 +63,9 @@ console.log("starting ResKey GM script...");
 /****BEGIN Settings****/
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
-	this.ENABLE_LOGGING = false;
+	this.ENABLE_LOGGING = true;
 	this.ENABLE_MODULE_LOGGING_DEFAULT = false;
-	this.ALLOW_EXPERIMENTAL_MODULES = false;
+	this.ALLOW_EXPERIMENTAL_MODULES = true;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
 	this.DEFAULT_BILLING_COUNTRY = "US"; //this must be the two letter representation of the country as ResKey understands it
@@ -72,9 +78,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_OFF_VALUE = 0;
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
 	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: this.ENABLE_MODULE_LOGGING_DEFAULT, module_name: "", module_name_readable: "", module_description: "" };
-	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser", "ReservationLinkBuilder" ];
+	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser"];
 	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory" ];
-	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: false },
+	this.MODULES_LIST_DISCONTINUED = [ "ReservationLinkBuilder" ];
+	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
 							"AutoRefresh" : { logging: false },
 							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
 	};
@@ -225,7 +232,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "AdvancedDataUtility", new functi
 
 	var loadReservationPages = function() {
 		_log("requesting reservation pages...");
-		jQuery.get("https://v2.reservationkey.com/web/reservationpages.asp?&sid="+getRandomNumberForWSCall(), parseReservationPagesOutOfResponse);
+		jQuery.get("https://v2.reservationkey.com/web/reservationpages.asp?sid="+getRandomNumberForWSCall(), parseReservationPagesOutOfResponse);
 	};
 
 	var parseReservationPagesOutOfResponse = function(responseText) {
@@ -302,7 +309,7 @@ ResKey.Modules.ModuleBase.prototype.detachFromPageEvents = function() {
 };
 
 ResKey.Modules.ModuleBase.prototype.ajaxStateChangeEventHandler = function(e) {
-	this._log("ajax state change detected");
+	this._log("ajax state change detected (url:"+xmlHttp.responseURL+")");
 	this._ajaxStateChangeEventHandler(e);
 };
 
@@ -694,6 +701,7 @@ ResKey.Modules.DoublePaymentPrevention.prototype = Object.create(ResKey.Modules.
 ResKey.Modules.DoublePaymentPrevention.prototype.constructor = ResKey.Modules.DoublePaymentPrevention;
 /****END DoublePaymentPrevention****/
 
+
 /****BEGIN CreditCardTypeAutoSelector****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "CreditCardTypeAutoSelector", function(o){
 	var me = this;
@@ -763,52 +771,109 @@ ResKey.Modules.CreditCardTypeAutoSelector.prototype.constructor = ResKey.Modules
 /****BEGIN AjaxHistory****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o){
 	var me = this;
-	var pageHistory;
-	var pageFuture;
-	var savingPage;
+	var previousPage;
+	var movingThroughHistory;
+	var pageHashMap;
+	var lastHashMapped;
+	var lastUrlMapped;
+
+	var disableDhtmlHistory = function() {
+		//need to kill off dhtmlHistory because it is buggy and messes up our system here.
+		window.dhtmlHistory.checkLocationOld = window.dhtmlHistory.checkLocation;
+		window.dhtmlHistory.checkLocation = function(){};
+		window.historyStorageOld = window.historyStorage;
+		window.historyStorage = null;
+	};
+
+	var reenableDhtmlHistory = function() {
+		window.historyStorage = window.historyStorageOld;
+		window.historyStorageOld = null;
+		window.dhtmlHistory.checkLocation = window.dhtmlHistory.checkLocationOld;
+		window.dhtmlHistory.checkLocationOld = null;
+	};
+/*
+	var getSideTabNumFromURL = function(urlString) {
+		switch(urlString) {
+			case "/reservations/availability.asp": return '24'; break;
+			case "/reservations/reservations.asp": return '25'; break;
+			case "/reservations/guests.asp": return '28'; break;
+			case "/reservations/activity.asp": return '41'; break;
+			default: return '';
+		};
+	};
+*/
+	var adjustSelectionOfCurrentPageTab = function() {
+		var url = getPageUrlForCurrentPage();
+		//strip out any querystring params, remove domain, etc..strip down to what would actually be in "onclick"
+		var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(url);
+		url = "/"+results[1]+"/"+results[2]+".asp";
+		me._log("adjusting for url "+url);
+
+		//this currently doesn't work for certain special cases like the reservation details and probably more
+
+		//clear old selection if we can add a new one
+		if (jQuery("#sidebuttons a[onclick*='"+url+"']").length > 0) {
+			jQuery("#sidebuttons a").parents("td[id*='t']").filter(function(o){ return jQuery(this).css("background-color") == "rgb(255, 255, 255)"}).css("backgroundColor", "").css("backgroundImage", "none");
+		}
+
+		//non-reservations
+		if (url.indexOf('/reservations/') == -1) {
+			jQuery("#sidebuttons a[onclick*='"+url+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sidetabbackon.gif')").css("backgroundRepeat", "repeat-x").css("backgroundPosition", "center bottom");
+		}
+		else {
+			jQuery("#sidebuttons a[onclick*='"+url+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sideshade.gif')").css("backgroundRepeat", "repeat-y").css("backgroundPosition", "right center");
+		}
+	};
 
 	var loadPage = function(pageName) {
-		me._log("loading page: "+pageName);
-		switch(pageName) {
+		pageName = pageName.replace('#','');
+		var url = pageHashMap[pageName];
+		me._log("loading page: "+pageName+" (url: "+url+")");
+		/*switch(pageName) {
 			case "#Availability": if ($('save')) {$('save').click(); }viewer('/reservations/availability.asp','','24'); break;
 			case "#Reservations": if ($('save')) {$('save').click(); }viewer('/reservations/reservations.asp','','25'); break;
 			case "#Guests": if ($('save')) {$('save').click(); }viewer('/reservations/guests.asp','','28'); break;
 			case "#Activity": if ($('save')) {$('save').click(); }viewer('/reservations/activity.asp','','41'); break;
 			case "#Reports": break;
-		}
+			case "#ReservationPages": break;
+			case "#ReservationPages": break;
+		}*/
+		if ($('save')) {
+			$('save').click();
+		} 
+
+		//viewer(url, '', getSideTabNumFromURL(url));
+		viewer(url,'','');
 	};
 
 	var savePage = function(pageToSave) {
-		me._log("saving page: "+pageToSave);
-		window.location.lasthash.push(window.location.hash);
-		window.location.hash = pageToSave;
-		//for some reason, this is causing the viewer to not load properly...moving it to the ajax readystate change fixes it 
-		//setTimeout(function(){ me._log("setting page hash: " +window.location.href+" "+pageToSave); window.location.hash = pageToSave; }, 1000); //timout to stop viewer from not loading properly - maybe due to an interval timer on check for page state rather than reacting to an actual state change
-		//pageHistory.push(pageToSave);
-	};
-
-	var backPage = function() {
-		if (window.location.lasthash.length > 0) { //pageHistory.length > 0
-			//var prevPage = pageHistory.pop();
-			var prevPage = window.location.hash;
-			window.location.hash = window.location.lasthash[window.location.lasthash.length-1];
-			window.location.lasthash.pop();
-			me._log("going back to page: "+prevPage);
-			loadPage(prevPage);
-			//pageFuture.push(currentPage);
+		if (pageToSave != null) {
+			me._log("saving page: "+pageToSave);
+			window.location.lasthash.push(window.location.hash);
+			window.location.hash = pageToSave;
 		}
 	};
 
-	var forwardPage = function() {
-		// var nextPage = pageFuture.pop();
-		// pageHistory.push(currentPage);
-		// loadPage(nextPage);
+	var backPage = function() {
+		var prevPage = window.location.hash;
+		me._log("going back to page: "+prevPage);
+		movingThroughHistory = true;
+
+		updateHash();
+
+		loadPage(prevPage);
+	};
+
+	var updateHash = function() {
+		if (movingThroughHistory && window.location.lasthash.length > 0) { //pageHistory.length > 0
+			window.location.lasthash.pop();
+		}
 	};
 
 	var swallowBackspace = function() { //prevent "back" initiation with backspace - courtesy of http://stackoverflow.com/questions/25806608/how-to-detect-browser-back-button-event-cross-browser
 		var rx = /INPUT|SELECT|TEXTAREA/i;
 
-		jQuery(document).off("keydown."+me._className+" keypress."+me._className).on("keydown."+me._className+" keypress."+me._className, function(e){
+		jQuery(document).off("keydown."+me._eventName+" keypress."+me._eventName).on("keydown."+me._eventName+" keypress."+me._eventName, function(e){
 			if( e.which == 8 ){ // 8 == backspace
 				if(!rx.test(e.target.tagName) || e.target.disabled || e.target.readOnly) {
 					me._log("swalllowing backspace");
@@ -819,18 +884,55 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};
 
 	var unswallowBackspace = function() {
-		jQuery(document).off("keydown."+me._className+" keypress."+me._className);
+		jQuery(document).off("keydown."+me._eventName+" keypress."+me._eventName);
+	};	
+
+	var isMouseInsideDocument = function() {
+		return jQuery(document).find(":hover").length > 0;
 	};
-	
+
+	var mapHashToURL = function(urlString) {
+		//var results = /reservationkey.com\/([a-zA-Z0-9]+)\/([a-zA-Z0-9]+)\.asp/.exec(urlString);
+		var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(urlString);
+		var hash = results[1]+"-"+results[2];
+		var savedURL = '/'+results[1]+'/'+results[2]+'.asp';
+		pageHashMap[hash] = savedURL;
+		lastHashMapped = hash;
+		lastUrlMapped = savedURL;
+		me._log("mapping hash ("+lastHashMapped+") for URL: "+lastUrlMapped);
+	};
+
+	var getPageUrlForCurrentPage = function() {
+		return lastUrlMapped;
+	};
+
+	var getPageHashForCurrentPage = function() {
+		//return ResKey.HelperUtility.getCurrentPageName();
+		return lastHashMapped;  //this will fail for initial load if the module isn't ON for first page load
+	};
+
 	me._ajaxStateChangeEventHandler = function(e) {	
-		savePage(previousPage);
-		savingPage = false;
-	};
+		//doing it here can cause us to log incorrect page stores for things like "save"
+		mapHashToURL(xmlHttp.responseURL);
+
+		if (!movingThroughHistory) {
+			previousPage = getPageHashForCurrentPage();
+			savePage(previousPage);
+		}
+		else {
+			movingThroughHistory = false;
+		}
+		adjustSelectionOfCurrentPageTab();
+	};	
 	
-	
-	me._attachToPageEvents = function(e) {
-		savePage(previousPage);
-		savingPage = true;
+	me._pageChangeEventHandler = function(e) {
+		/*if (!movingThroughHistory) {
+			previousPage = getPageHashForCurrentPage();
+			savePage(previousPage);
+		}
+		else {
+			movingThroughHistory = false;
+		}*/
 	};	
 	
 	me._enable = function() {
@@ -838,60 +940,58 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		me.attachToAjaxStateChange();
 	};
 	
-	me._disable = function() {
+	me._disable = function() {	
 		me.detachFromAjaxStateChange();
 		me.detachFromPageEvents();
 	};
 	
 	me._turnOn = function() {
+		disableDhtmlHistory();
 		window.location.lasthash = new Array();
+		lastHashMapped = "reservations-availability"; //DEFAULT
+		lastUrlMapped = "https://v2.reservationkey.com/reservations"; //DEFAULT
+		pageHashMap = {};
 		pageHistory = new Array();
 		pageFuture = new Array();
-		savingPage = false;
+		previousPage = getPageHashForCurrentPage();
+		savePage(previousPage);
+		movingThroughHistory = false;
 		
-		//jQuery(window).off("hashchange."+me._className).on("hashchange."+me._className, function() {
+		//at this point, hash has already changed
 		window.onhashchange = function() {
-			me._log("window.hashchange...");
-			if (window.innerDocClick) { //Your own in-page mechanism triggered the hash change
-				me._log("in-page mechanism clicked.");
-				window.innerDocClick = false;
-			} else { //Browser back button was clicked
-				me._log("back button clicked.");
-				if (window.location.hash != '') {
-					backPage(); //once loadPage is done, it calls backPage again and again until...?
-				} else { //default back behavior
-					history.pushState("", document.title, window.location.pathname);
-					location.reload();
+			if (!movingThroughHistory) {
+				me._log("window.hashchange...");
+				if (isMouseInsideDocument()) { //Your own in-page mechanism triggered the hash change
+					me._log("in-page mechanism clicked."); //this is being triggered when back button clicked
+				} else { //Browser back button was clicked 
+					me._log("back button clicked.");
+					if (window.location.hash != '') {
+						backPage();
+					} else { //default back behavior
+						history.pushState("", document.title, window.location.pathname);
+						location.reload();
+					}
 				}
 			}
+			else {
+				movingThroughHistory = false;
+			}
 			return true;
-		}
-		//});				
-		
-		jQuery(document).off("mouseover."+me._className).on("mouseover."+me._className, function() {
-			//User's mouse is inside the page.
-			window.innerDocClick = true;
-			return true;
-		});
+		};	
 
-		jQuery(document).off("mouseleave."+me._className).on("mouseleave."+me._className, function() {
-			//User's mouse has left the page.
-			window.innerDocClick = false;
-			return true;
-		});
-		
 		swallowBackspace();
-		//savePage(currentPage);
 	};
 	
 	me._turnOff = function() {
 		window.onhashchange = null;
 		window.location.lasthash = null;
 		window.location.hash = '';
-		jQuery(document).off("mouseleave."+me._className);
-		jQuery(document).off("mouseover."+me._className);
+		previousPage = null;
+		pageHistory = null;
+		pageFuture = null;
 		me.detachFromAjaxStateChange();
 		unswallowBackspace();
+		reenableDhtmlHistory();
 	};
 	
 	me._isOnRelevantPage = function() {
@@ -910,6 +1010,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 ResKey.Modules.AjaxHistory.prototype = Object.create(ResKey.Modules.ModuleBase.prototype);
 ResKey.Modules.AjaxHistory.prototype.constructor = ResKey.Modules.AjaxHistory;
 /****END AjaxHistory****/
+
 
 /****BEGIN BillingAddressParser****/
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "BillingAddressParser", function(o){
@@ -1366,7 +1467,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "UsabilityEnhancements", new func
 			ResKey.HelperUtility.log("page ready. beginning setup...");
 			
 			ResKey.HookHelper.start();
-			ResKey.AdvancedDataUtility.loadData();
+			//ResKey.AdvancedDataUtility.loadData(); //disabled for now, because we don't need it & it unnecessarily hits the server
 			initModules();
 			ResKey.EnhancementsController.insertIntoPage(moduleList);
 		}
