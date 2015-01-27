@@ -805,16 +805,16 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	var adjustSelectionOfCurrentPageTab = function() {
 		var url = getPageUrlForCurrentPage();
 		//strip out any querystring params, remove domain, etc..strip down to what would actually be in "onclick"
-		var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(url);
-		url = "/"+results[1]+"/"+results[2]+".asp";
-		me._log("adjusting for url "+url);
+		// var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(url);
+		// url = "/"+results[1]+"/"+results[2]+".asp";
+		// me._log("adjusting for url "+url);
 
 		//this currently doesn't work for certain special cases like the reservation details and probably more
 
 		//clear old selection if we can add a new one
-		if (jQuery("#sidebuttons a[onclick*='"+url+"']").length > 0) {
+		// if (jQuery("#sidebuttons a[onclick*='"+url+"']").length > 0) {
 			jQuery("#sidebuttons a").parents("td[id*='t']").filter(function(o){ return jQuery(this).css("background-color") == "rgb(255, 255, 255)"}).css("backgroundColor", "").css("backgroundImage", "none");
-		}
+		// }
 
 		//non-reservations
 		if (url.indexOf('/reservations/') == -1) {
