@@ -7,6 +7,8 @@ Table of Contents
 
 
 ## Update Log<a id="updateLog"></a>
+- **1/26/2015**: v1.2 released -  <a href="https://raw.githubusercontent.com/EmKayUltra/ReservationKey_Usability_Enhancements/release-v1.2/ReservationKey_Usability_Enhancements.user.js">CLICK HERE TO UPDATE/INSTALL</a>.  Added pre-booked reservation link builder.  Allows you to easily use the new feature of creating prebooked reservation links to send to guests (read more about this in the System Change Log).
+		  ![Reservation Link Builder](http://i60.tinypic.com/2dh5v9w.jpg)
 - **1/22/2015**: v1.1 released - <a href="https://raw.githubusercontent.com/EmKayUltra/ReservationKey_Usability_Enhancements/release-v1.1/ReservationKey_Usability_Enhancements.user.js">CLICK HERE TO UPDATE/INSTALL</a>.  Added Billing Address Parser, which will take your contact address & separate it out into the correct components for your credit card billing address (address, city, state, zip, country):
           ![Billing Address Parser](http://i57.tinypic.com/ziriow.png)
 - **1/21/2015**: v1.0 released - <a href="https://raw.githubusercontent.com/EmKayUltra/ReservationKey_Usability_Enhancements/release-v1.0/ReservationKey_Usability_Enhancements.user.js">CLICK HERE TO UPDATE/INSTALL</a></span>: Includes: Force HTTPS, Auto Reminders, Double Payment Prevention, Automatically Select Credit Card Type

@@ -209,7 +209,7 @@
 		var ReservationPage = { Name: "", AvailabilityURL: "", CalendarURL: ""};
 
 		me.getReservationPages = function() {
-			return ReservationPages;
+			return reservationPages;
 		};
 
 		me.loadData = function() {
@@ -292,7 +292,7 @@
 
 	ResKey.Modules.ModuleBase.prototype.attachToPageEvents = function() {
 		this._log("attaching to page events...");
-		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, this.pageChangeEventHandler);
+		jQuery(document).off("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("pageChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, jQuery.proxy(this.pageChangeEventHandler, this));
 		this._attachToPageEvents();
 	};
 
@@ -309,7 +309,7 @@
 
 	ResKey.Modules.ModuleBase.prototype.attachToAjaxStateChange = function() {
 		this._log("attaching to AJAX state change...");
-		jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, this._ajaxStateChangeEventHandler);
+		jQuery(document).off("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName).on("ajaxStateChanged_"+ResKey.Settings.JQUERY_EVENT_CLASS_GENERAL+"."+this._eventName, jQuery.proxy(this.ajaxStateChangeEventHandler, this));
 		this._attachToAjaxStateChange();
 	};
 
@@ -1090,54 +1090,84 @@
 	/****BEGIN ReservationLinkBuilder****/
 	Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "ReservationLinkBuilder", function(o){
 		var me = this;
-		var htmlContainerID = "ResKey_ReservationLinkBuilder";
-		var html = 	"<div id='"+htmlContainerID+"' style='float: left;'> " +
-						"<select id='ResKey_ReservationLinkBuilder_ReservationPage'></select>" +
-						"<input type='text' id='ResKey_ReservationLinkBuilder_ReservationLinkText' />" +
-					"</div>";
+		var HTML_CONTAINER_ID = "ResKey_ReservationLinkBuilder";
+		var RESERVATION_PAGE_DROPDOWN_ID = "ResKey_ReservationLinkBuilder_ReservationPage";
+		var RESERVATION_LINK_TEXTBOX_ID = "ResKey_ReservationLinkBuilder_ReservationLinkText";
+		var GENERATE_LINK_BUTTON_ID = "ResKey_ReservationLinkBuilder_ReservationLinkGenerationButton";
+
+		var createLinkBuildingUI = function() {
+			var html = 	"<div id='"+HTML_CONTAINER_ID+"' style='float: left; font-size: .75em;'> " +
+				"<span style='font-weight: bold;'>Pre-Booked Reservation Link Builder</span><br />" +
+				"<select id='"+RESERVATION_PAGE_DROPDOWN_ID+"' title='Select a reservation page to direct the guest to for this reservation' style='font-size: 1em; margin-left: 5px;'></select><br />" +
+				"<input type='text' id='"+RESERVATION_LINK_TEXTBOX_ID+"' title='Copy this link and send it to your guest' style='margin-left: 5px; width: 450px; font-size: 1em;' />" +
+				"<button id='"+GENERATE_LINK_BUTTON_ID+"' style='font-size: 1em;'>Create Link</button>" +
+			"</div>";
+
+			me._log("creating UI...");
+			jQuery(html).appendTo("#resdetails_head");
+
+			//add event handlers
+			var reservationPages = ResKey.AdvancedDataUtility.getReservationPages();
+			var currentReservationPage;
+			jQuery.each(reservationPages, function(i){
+				currentReservationPage = reservationPages[i];
+				me._log("adding reservation page "+currentReservationPage.Name+"...");
+				if (typeof currentReservationPage.AvailabilityURL != "undefined") {
+					jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID).append("<option value='"+currentReservationPage.AvailabilityURL+"'>"+currentReservationPage.Name+" - Availability</option>");
+				}
+				if (typeof currentReservationPage.CalendarURL != "undefined") {
+					jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID).append("<option value='"+currentReservationPage.CalendarURL+"'>"+currentReservationPage.Name+" - Calendar</option>");
+				}
+			});
+
+			jQuery(document).on("click."+this._eventName, "#"+GENERATE_LINK_BUTTON_ID, function(){
+				var reservationID = /Reservation Details: #([0-9]+)/.exec(jQuery("#resdetails_head h2").text())[1];
+				var arrivalDate = new Date(jQuery("#arrive_new").val());
+				var departureDate = new Date(jQuery("#depart_new").val());
+				var startDateAsMMDotDDDotYYYY = (arrivalDate.getMonth()+1)+"."+(arrivalDate.getDate())+"."+(arrivalDate.getFullYear());
+				var endDateAsMMDotDDDotYYYY = (departureDate.getMonth()+1)+"."+(departureDate.getDate())+"."+(departureDate.getFullYear());
+				var reservationURL = "";
+				if (jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID+" option:selected").text().indexOf("Availability") >= 0) {
+					reservationURL = jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID).val()+"/s|"+startDateAsMMDotDDDotYYYY+"|"+endDateAsMMDotDDDotYYYY+"/idr|"+reservationID
+				}
+				else if (jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID+" option:selected").text().indexOf("Calendar") >= 0) {
+					reservationURL = jQuery("#"+RESERVATION_PAGE_DROPDOWN_ID).val()+"/s|"+startDateAsMMDotDDDotYYYY+"/idr|"+reservationID
+				}
+				jQuery("#"+RESERVATION_LINK_TEXTBOX_ID).val(reservationURL);
+			});
+		};
+
+		var removeLinkBuildingUI = function() {
+			jQuery("#"+HTML_CONTAINER_ID).remove();
+		};
 
 		me._pageChangeEventHandler = function(e) {
-			console.log("PAGE CHANGE DETECTED");
 			me.turnOnOrOffBasedOnCurrentPage();
 		};
 
 		me._ajaxStateChangeEventHandler = function(e) {
-			console.log("AJAX DETECTED");
 			if (me.isEnabled() && ResKey.HelperUtility.currentlyOnReservationsTab()) {
-
+				if (jQuery("#"+HTML_CONTAINER_ID).length == 0) {
+					createLinkBuildingUI();	
+				}
 			}
 		};
 		
 		me._enable = function() {
-			console.log("ENABLING");
 			me.attachToPageEvents();
 		};
 		
 		me._disable = function() {
-			console.log("DISABLING");
 			me.detachFromPageEvents();
 		};
 		
-		me._turnOn = function() {	
-			console.log("TURNING ON");
-			me._log("inserting html container");
-			jQuery(html).append("#resdetails_head");
-			//me.attachToAjaxStateChange();	
-			//Add button and dropdown list of reservationPages - prebook links
-			//get reservationID /Reservation Details: #([0-9]+)/.exec(jQuery("#resdetails_head h2").text())[1];
-			//arrivalDate = new Date(jQuery("#arrive_new").val());
-			//departureDate = new Date(jQuery("#depart_new").val());
-			//startDateAsMMDotDDDotYYYY = (arrivalDate.getMonth()+1)+"."+(arrivalDate.getDate())+"."+(arrivalDate.getFullYear())
-			//endDateAsMMDotDDDotYYYY = (departureDate.getMonth()+1)+"."+(departureDate.getDate())+"."+(departureDate.getFullYear())
-			//if button clicked, figure out which reservationPage they want to use & create link accordingly:
-			//AvailabilityURL+"/s|"+startDateAsMMDotDDDotYYYY+"|"+endDateAsMMDotDDDotYYYY+"/idr|"+reservationID
-			//CalendarURL+"/s|"+startDateAsMMDotDDDotYYYY+"/idr|"+reservationID
+		me._turnOn = function() {		
+			me.attachToAjaxStateChange();	
 		};
 		
 		me._turnOff = function() {
-			console.log("TURNING OFF");
-			//me.detachFromAjaxStateChange();
-			//jQuery("#"+htmlContainerID).remove();
+			me.detachFromAjaxStateChange();
+			removeLinkBuildingUI();
 		};
 		
 		me._isOnRelevantPage = function() {
@@ -1337,7 +1367,7 @@
 				ResKey.HelperUtility.log("page ready. beginning setup...");
 				
 				ResKey.HookHelper.start();
-				
+				ResKey.AdvancedDataUtility.loadData();
 				initModules();
 				ResKey.EnhancementsController.insertIntoPage(moduleList);
 			}
@@ -1349,7 +1379,6 @@
 		me.run = function() {
 			ResKey.HelperUtility.log("starting ResKey Usability Enhancements...");
 			ResKey.HelperUtility.extendJQuery();
-			ResKey.AdvancedDataUtility.loadData();
 			setTimeout(initPageWhenFullyLoaded, 500);	
 		};
 		

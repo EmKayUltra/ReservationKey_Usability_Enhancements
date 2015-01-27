@@ -11,7 +11,7 @@
 ### Bugs
 - [ ] BUG AutoRefresh not detecting actions & not logging after leaving page to activity then returning to availability - but refreshes still seem to happen..?
 - [ ] BUG DoublePaymentPrevention - if enable paymentprevention with reservation & links already open, doesn't actually enable it yet	
-
+- [ ] BUG ReservationLinkBuilder - if already on reservation tab & turn on, doesn't add html at that point
  
 ### Code Review
 
