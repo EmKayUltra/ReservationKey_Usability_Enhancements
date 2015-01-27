@@ -10,7 +10,7 @@
 // @require    http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js
 // @require    http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js
 // @require    https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js
-// @version    1.1.1
+// @version    1.2
 // @grant      none
 // ==/UserScript==
 /* NOTE: "@include" very specific (no general-case asterixes, etc) because otherwise all of this loads for every AJAX call as well */
@@ -57,9 +57,9 @@ console.log("starting ResKey GM script...");
 /****BEGIN Settings****/
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
-	this.ENABLE_LOGGING = true;
-	this.ENABLE_MODULE_LOGGING_DEFAULT = true;
-	this.ALLOW_EXPERIMENTAL_MODULES = true;
+	this.ENABLE_LOGGING = false;
+	this.ENABLE_MODULE_LOGGING_DEFAULT = false;
+	this.ALLOW_EXPERIMENTAL_MODULES = false;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
 	this.DEFAULT_BILLING_COUNTRY = "US"; //this must be the two letter representation of the country as ResKey understands it
@@ -72,12 +72,11 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_OFF_VALUE = 0;
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
 	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: this.ENABLE_MODULE_LOGGING_DEFAULT, module_name: "", module_name_readable: "", module_description: "" };
-	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser" ];
-	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory", "ReservationLinkBuilder" ];
+	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser", "ReservationLinkBuilder" ];
+	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory" ];
 	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: false },
 							"AutoRefresh" : { logging: false },
-							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY },
-							"ReservationLinkBuilder": { logging: true }
+							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
 	};
 });
 /****END Settings****/
