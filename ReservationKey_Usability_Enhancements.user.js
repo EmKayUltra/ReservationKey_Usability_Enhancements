@@ -220,7 +220,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "AdvancedDataUtility", new functi
 	};
 
 	var getRandomNumberForWSCall = function() {
-		return 1; //TODO
+		return Math.random();
 	};
 
 	var loadReservationPages = function() {

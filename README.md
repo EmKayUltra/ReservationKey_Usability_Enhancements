@@ -1,6 +1,7 @@
 # ReservationKey_Usability_Enhancements
 
 Table of Contents
+- <a href="https://raw.githubusercontent.com/EmKayUltra/ReservationKey_Usability_Enhancements/master/ReservationKey_Usability_Enhancements.user.js">Download</a> the latest version
 - <a href="#updateLog">Update Log</a>
 - <a href="#overview">Overview</a>
 - <a href="#instructions">Instructions</a>
@@ -20,20 +21,22 @@ Here's what we have so far, and more are in the works.  You can opt in or out, s
 
 Here's a list of enhancements we have so far, and more are in the works.  You can opt in or out of using any of these, so you can decide to only use the ones that make sense for you and your business:
 
-Force HTTPS - Make sure that ReservationKey is always running in a secure mode
+**Force HTTPS** - Make sure that ReservationKey is always running in a secure mode
 
-Auto Reminders - Causes the reminders window pop-up automatically when something is due immediately
+**Auto Reminders** - Causes the reminders window pop-up automatically when something is due immediately
 
-Double Payment Prevention - Pops up a confirmation dialog when you "Add Payment," "Charge Card," "Remove," or "Refund" to prevent accidental financial changes.  Additionally, it disables these buttons after you've clicked them, so you don't accidentally click twice and double charge the card.
+**Double Payment Prevention** - Pops up a confirmation dialog when you "Add Payment," "Charge Card," "Remove," or "Refund" to prevent accidental financial changes.  Additionally, it disables these buttons after you've clicked them, so you don't accidentally click twice and double charge the card.
 
-Automatically Select Credit Card Type - Once you start typing the credit card number, the correct credit card type (Visa, Mastercard, Discover, American Express) will automatically be selected based on the card #.
+**Automatically Select Credit Card Type** - Once you start typing the credit card number, the correct credit card type (Visa, Mastercard, Discover, American Express) will automatically be selected based on the card #.
 
-Billing Address Parser - Will usually correctly take the "contact address" & separate it into the various components (address, city, state, zip, country)
+**Billing Address** - Will usually correctly take the "contact address" & separate it into the various components (address, city, state, zip, country)
+
+**Prebooked Reservation Link Builder** - Helps you create the prebooked reservation link to share with guests.
 
 COMING SOON:
 
-Auto Refresh - Automatically refresh the calendar availability screen
-History - Enable the use of the "Back" and "Forward" browser buttons
+**Auto Refresh** - Automatically refresh the calendar availability screen
+**History** - Enable the use of the "Back" and "Forward" browser buttons
 
 ## Instructions<a id="instructions"></a>
 To start using these enhancements today, all you need to do is follow these simple instructions:
