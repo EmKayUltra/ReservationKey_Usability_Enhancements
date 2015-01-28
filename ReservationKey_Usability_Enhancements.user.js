@@ -82,7 +82,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory" ];
 	this.MODULES_LIST_DISCONTINUED = [ "ReservationLinkBuilder" ];
 	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
-							"AutoRefresh" : { logging: false },
+							"AutoRefresh" : { logging: true },
 							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
 	};
 });
@@ -184,6 +184,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "HelperUtility", new function(){
 	me.currentlyOnActivityTab = function() {
 		return (ResKey.HookHelper.getCurrentPage() == "Activity");
 	};
+
+	me.getRandomNumberForWSCall = function() {
+		return Math.random();
+	};
 });
 /****END HelperUtility****/
 
@@ -226,13 +230,9 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "AdvancedDataUtility", new functi
 		ResKey.HelperUtility.log("AdvancedDataUtility: "+text);
 	};
 
-	var getRandomNumberForWSCall = function() {
-		return Math.random();
-	};
-
 	var loadReservationPages = function() {
 		_log("requesting reservation pages...");
-		jQuery.get("https://v2.reservationkey.com/web/reservationpages.asp?sid="+getRandomNumberForWSCall(), parseReservationPagesOutOfResponse);
+		jQuery.get("https://v2.reservationkey.com/web/reservationpages.asp?sid="+ResKey.HelperUtility.getRandomNumberForWSCall(), parseReservationPagesOutOfResponse);
 	};
 
 	var parseReservationPagesOutOfResponse = function(responseText) {
@@ -769,18 +769,10 @@ ResKey.Modules.CreditCardTypeAutoSelector.prototype.constructor = ResKey.Modules
 
 
 /****BEGIN AjaxHistory****/
-//IDEA: we could wrap all the viewer* functions, and use those to capture page changes.  may not be able to do this without unsafewindow?
-//IDEA: we could pass in which viewer function needs to be called for a particular hashmap
-//the problem w/ this is we don't want to wade back through a whole lot of actions, just a few special cases we care about. namely, resdetails
-//TODO: FEATURE currently works for most cases, but some need special attention (like clicking a reservation from the calendar & can't go back b/c polltime isn't fast enough to pick up the rapid page load returning AND the ajax call returning)
-//TODO: FEATURE this needs to handle edge cases like opening a reservation from the calendar (which it does except for tab coloring)
-//TODO: FEATURE allow this to work across actual back actions (for instance, going from "website/*" pages to "properties/*" pages & back) - probably because we're always using "viewer" and not the subfunctions
-//TODO: FEATURE we may want to remove (sid=[\.0-9]+)& to force a full reload instead of the saved one
+//IDEA: we could pass in which viewer function needs to be called for a particular hashmap - the problem w/ this is we don't want to wade back through a whole lot of actions, just a few special cases we care about. namely, resdetails
+//TODO: FEATURE allow this to work across actual back actions (for instance, going from "website/*" pages to "properties/*" pages & back) - think its now happening b/c 
 //TODO: BUG reload of page immediately (thinks "back" was hit)
-//TODO: REVIEW BUG when going back to an ajax page that was only a partial load (loading "payments" on a reservation, or opening a forum thread, for instance) - would this have happened with the "named pages" approach?
-//TODO: REVIEW MAYBE BUG this is using the AJAX state, which will probably result in some problems w/ autorefresh (maybe?)
-//TODO: REVIEW MAYBE BUG could this be causing multiple credit card processing or payments for instance, since we're using the ajax state change?
-//TODO: REVIEW remove lasthash array?
+//TODO: BUG this is using the AJAX state, which will probably result in some problems w/ autorefresh (maybe?)
 //TODO: TEST all pages if possible, including forums - this isn't working in some places, losing querystring params is killing it
 //TODO: REFACTOR
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o){
@@ -879,7 +871,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		var rx = /INPUT|SELECT|TEXTAREA/i;
 
 		jQuery(document).off("keydown."+me._eventName+" keypress."+me._eventName).on("keydown."+me._eventName+" keypress."+me._eventName, function(e){
-			if( e.which == 8 ){ // 8 == backspace
+			if(e.which == 8){ // 8 == backspace
 				if(!rx.test(e.target.tagName) || e.target.disabled || e.target.readOnly) {
 					me._log("swalllowing backspace");
 					e.preventDefault();
@@ -909,6 +901,41 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		return hash;
 	};
 
+	var determineInitialFullUrl = function() {
+		//this is used because each major menu change will reload the entire GM script & the AJAX request is done before we are turned on, so
+		//we need to retroactively set the AJAX url that was set		
+		var initialFullURL;
+
+		/*var basicURL = createBasicPageUrlFromInitialFullUrl(window.location.href);
+		me._log("initial basicURL: "+basicURL);
+		me._log("easy answer: "+xmlHttp.responseURL);
+		if (basicURL == "/reservations/") {
+			basicURL = "/reservations/availability.asp";
+		}
+		else if (basicURL == "/web/") {
+			basicURL = "/web/reservationpages.asp";
+		}
+		else if (basicURL == "/properties/") {
+			basicURL = "/properties/properties.asp";
+		}
+		else if (basicURL == "/settings/") {
+			basicURL = "/settings/myaccount.asp";
+		}
+		initialFullURL = "https://v2.reservationkey.com" + basicURL;
+
+		me._log("initialFullURL: "+initialFullURL);
+		return initialFullURL;*/
+
+		//all of above unnecessary because we can just do this: 
+		initialFullURL = xmlHttp.responseURL;
+		//trim querystring params
+		if (initialFullURL.indexOf("?") != -1) {
+			initialFullURL = initialFullURL.substring(0, initialFullURL.indexOf("?"));
+		}
+
+		return initialFullURL;
+	};
+
 	var logAjaxUrl = function(urlString) {
 		mapHashToURL(urlString);
 	};
@@ -924,11 +951,35 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		me._log("mapping hash ("+lastHashMapped+") for URL: "+lastUrlMapped);
 	};
 
+	// var createBasicPageUrlFromInitialFullUrl = function(urlString) {
+	// 	//https://v2.reservationkey.com/reservations/?v=availability, etc
+	// 	var results = /reservationkey.com\/([^\/]+)\/\?.*v=([^&]+)/.exec(urlString);
+	// 	var basicURL = "";
+	// 	if (results != null && results.length > 2) {
+	// 		basicURL = '/'+results[1]+'/'+results[2]+'.asp';
+	// 	}
+	// 	else {
+	// 		results = /reservationkey.com\/([^?]+)\??/.exec(urlString);			
+	// 		if (results != null && results.length > 1) {
+	// 			basicURL = '/'+results[1];
+	// 		}
+	// 	}
+	// 	return basicURL;
+	// };
+
 	var createBasicPageUrlFromFullUrl = function(urlString) {
 		var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(urlString);
-		var savedURL = '/'+results[1]+'/'+results[2]+'.asp';
-
-		return '/'+results[1]+'/'+results[2]+'.asp';
+		var basicURL = "";
+		if (results != null && results.length > 2) {
+			basicURL = '/'+results[1]+'/'+results[2]+'.asp';
+		}
+		else {
+			results = /reservationkey.com\/([^?]+)\??/.exec(urlString);			
+			if (results != null && results.length > 1) {
+				basicURL = '/'+results[1];
+			}
+		}
+		return basicURL;
 	};
 
 	var createViewerUrlFromFullUrl = function(urlString) {
@@ -946,9 +997,13 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};
 
 	var extractQueryStringParametersFromViewerUrlForViewer = function(viewerURL) {
+		var queryStringParameters = "";
 		var results = /^[^?]+\?(.+)$/.exec(viewerURL);
-		var queryStringParameters = results[1];
-
+		if (results != null && results.length > 1) {
+			queryStringParameters = results[1];
+		}
+		//remove old sid & viewer will add a new one
+		queryStringParameters = queryStringParameters.replace(/(&sid=[\.0-9]+)/, ''); 
 		return queryStringParameters;
 	};
 
@@ -1045,13 +1100,12 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};
 	
 	me._turnOn = function() {
-		var initialURL = "https://v2.reservationkey.com/reservations/availability.asp";
+		var initialFullURL = determineInitialFullUrl();
 		disableDhtmlHistory();
 		pageHashMap = {};
-		logAjaxUrl(initialURL);
+		logAjaxUrl(initialFullURL);
 		saveCurrentPageToHistory();
 		movingThroughHistory = false;
-		console.log(pageHashMap);
 
 		//IDEA: wrap viewer - seems to only work for first function call then it gets overwritten somehow?
 		(function(){
