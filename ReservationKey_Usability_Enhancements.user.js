@@ -770,10 +770,13 @@ ResKey.Modules.CreditCardTypeAutoSelector.prototype.constructor = ResKey.Modules
 
 /****BEGIN AjaxHistory****/
 //TODO: FEATURE this needs to handle edge cases like opening a reservation from the calendar (which it does except for tab coloring)
-//TODO: FEATURE allow this to work across actual back actions (for instance, going from "website/*" pages to "properties/*" pages & back)
+//TODO: FEATURE allow this to work across actual back actions (for instance, going from "website/*" pages to "properties/*" pages & back) - probably because we're always using "viewer" and not the subfunctions
+//TODO: FEATURE we may want to remove (sid=[\.0-9]+)& to force a full reload instead of the saved one
+//TODO: REVIEW BUG when going back to an ajax page that was only a partial load (loading "payments" on a reservation, or opening a forum thread, for instance) - would this have happened with the "named pages" approach?
 //TODO: REVIEW MAYBE BUG this is using the AJAX state, which will probably result in some problems w/ autorefresh (maybe?)
 //TODO: REVIEW MAYBE BUG could this be causing multiple credit card processing or payments for instance, since we're using the ajax state change?
-//TODO: TEST all pages if possible, including forums
+//TODO: REVIEW remove lasthash array?
+//TODO: TEST all pages if possible, including forums - this isn't working in some places, losing querystring params is killing it
 //TODO: REFACTOR
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o){
 	var me = this;
@@ -797,77 +800,78 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		window.dhtmlHistory.checkLocation = window.dhtmlHistory.checkLocationOld;
 		window.dhtmlHistory.checkLocationOld = null;
 	};
-/*
-	var getSideTabNumFromURL = function(urlString) {
-		switch(urlString) {
-			case "/reservations/availability.asp": return '24'; break;
-			case "/reservations/reservations.asp": return '25'; break;
-			case "/reservations/guests.asp": return '28'; break;
-			case "/reservations/activity.asp": return '41'; break;
-			default: return '';
-		};
+
+	var pageHasHorizontalMenu = function(pageURL) {
+		return pageURL.indexOf('/reservations/') > -1;
 	};
-*/
+
+	var setHorizontalMenuItemAsCurrentPage = function(basicURL) {
+		jQuery("#sidebuttons a[onclick*='"+basicURL+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sideshade.gif')").css("backgroundRepeat", "repeat-y").css("backgroundPosition", "right center");
+	};
+
+	var setVerticalMenuItemAsCurrentPage = function(basicURL) {
+		jQuery("#sidebuttons a[onclick*='"+basicURL+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sidetabbackon.gif')").css("backgroundRepeat", "repeat-x").css("backgroundPosition", "center bottom");
+	};
+
 	var adjustSelectionOfCurrentPageTab = function() {
-		var url = getPageUrlForCurrentPage();
-		//strip out any querystring params, remove domain, etc..strip down to what would actually be in "onclick"
-		// var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(url);
-		// url = "/"+results[1]+"/"+results[2]+".asp";
-		// me._log("adjusting for url "+url);
+		var basicURL = getBasicPageUrlForCurrentPage();
+		adjustSelectionOfCurrentPageTabToMatchBasicURL(basicURL);
+	};
+
+	var adjustSelectionOfCurrentPageTabToMatchBasicURL = function(basicURL) {
+		me._log("adjusting menu item selection to match page: "+basicURL);
 
 		//this currently doesn't work for certain special cases like the reservation details and probably more
 
 		//clear old selection if we can add a new one
 		// if (jQuery("#sidebuttons a[onclick*='"+url+"']").length > 0) {
-			jQuery("#sidebuttons a").parents("td[id*='t']").filter(function(o){ return jQuery(this).css("background-color") == "rgb(255, 255, 255)"}).css("backgroundColor", "").css("backgroundImage", "none");
+		jQuery("#sidebuttons a").parents("td[id*='t']").filter(function(o){ return jQuery(this).css("background-color") == "rgb(255, 255, 255)"}).css("backgroundColor", "").css("backgroundImage", "none");
 		// }
 
-		//non-reservations
-		if (url.indexOf('/reservations/') == -1) {
-			jQuery("#sidebuttons a[onclick*='"+url+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sidetabbackon.gif')").css("backgroundRepeat", "repeat-x").css("backgroundPosition", "center bottom");
+		if (pageHasHorizontalMenu(basicURL)) {
+			setHorizontalMenuItemAsCurrentPage(basicURL);
 		}
 		else {
-			jQuery("#sidebuttons a[onclick*='"+url+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sideshade.gif')").css("backgroundRepeat", "repeat-y").css("backgroundPosition", "right center");
+			setVerticalMenuItemAsCurrentPage(basicURL);
 		}
 	};
 
-	var loadPage = function(pageName) {
-		pageName = pageName.replace('#','');
-		var url = pageHashMap[pageName];
-		me._log("loading page: "+pageName+" (url: "+url+")");
-		/*switch(pageName) {
-			case "#Availability": if ($('save')) {$('save').click(); }viewer('/reservations/availability.asp','','24'); break;
-			case "#Reservations": if ($('save')) {$('save').click(); }viewer('/reservations/reservations.asp','','25'); break;
-			case "#Guests": if ($('save')) {$('save').click(); }viewer('/reservations/guests.asp','','28'); break;
-			case "#Activity": if ($('save')) {$('save').click(); }viewer('/reservations/activity.asp','','41'); break;
-			case "#Reports": break;
-			case "#ReservationPages": break;
-			case "#ReservationPages": break;
-		}*/
+	var loadPageFromHashTag = function(pageHashTag) {
+		var viewerURL = getViewerUrlForPageHashTag(pageHashTag);
+		var basicURL = extractBasicPageUrlFromViewerUrl(viewerURL);
+		var queryStringParameters = extractQueryStringParametersFromViewerUrlForViewer(viewerURL);
+		me._log("loading page: "+pageHashTag+" (url: "+viewerURL+")");
+
 		if ($('save')) {
 			$('save').click();
 		} 
 
-		//viewer(url, '', getSideTabNumFromURL(url));
-		viewer(url,'','');
+		viewer(basicURL,queryStringParameters,'');
+		adjustSelectionOfCurrentPageTabToMatchBasicURL(basicURL);
 	};
 
-	var savePage = function(pageToSave) {
-		if (pageToSave != null) {
-			me._log("saving page: "+pageToSave);
+	var saveCurrentPageToHistory = function() {
+		previousPage = getPageHashTagForCurrentPage();
+		savePageHashTag(previousPage);
+	};
+
+	var savePageHashTag = function(pageHashTagToSave) {
+		if (pageHashTagToSave != null) {
+			me._log("saving page: "+pageHashTagToSave);
 			window.location.lasthash.push(window.location.hash);
-			window.location.hash = pageToSave;
+			window.location.hash = pageHashTagToSave;
 		}
 	};
 
 	var backPage = function() {
-		var prevPage = window.location.hash;
-		me._log("going back to page: "+prevPage);
+		var pageHashTagToLoad = window.location.hash.replace('#','');
+		me._log("going back to page: "+pageHashTagToLoad);
 		movingThroughHistory = true;
 
 		updateHash();
 
-		loadPage(prevPage);
+		//loadPage(prevPage);
+		loadPageFromHashTag(pageHashTagToLoad);
 	};
 
 	var updateHash = function() {
@@ -897,48 +901,124 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		return jQuery(document).find(":hover").length > 0;
 	};
 
+	//http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+	//TODO: REFACTOR move this out to different helper class
+	var generateHashFromString = function(stringToHash) {
+		var hash = 0, i, chr, len;
+		if (stringToHash.length == 0) return hash;
+		for (i = 0, len = stringToHash.length; i < len; i++) {
+			chr   = stringToHash.charCodeAt(i);
+			hash  = ((hash << 5) - hash) + chr;
+			hash |= 0; // Convert to 32bit integer
+		}
+		return hash;
+	};
+
+	var logAjaxUrl = function(urlString) {
+		mapHashToURL(urlString);
+	};
+
 	var mapHashToURL = function(urlString) {
-		//var results = /reservationkey.com\/([a-zA-Z0-9]+)\/([a-zA-Z0-9]+)\.asp/.exec(urlString);
-		var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(urlString);
-		var hash = results[1]+"-"+results[2];
-		var savedURL = '/'+results[1]+'/'+results[2]+'.asp';
-		pageHashMap[hash] = savedURL;
-		lastHashMapped = hash;
-		lastUrlMapped = savedURL;
+		var hashTag = createPageHashTagFromFullUrl(urlString);
+		var viewerURL =  createViewerUrlFromFullUrl(urlString);
+		
+		associatePageHashTagWithViewerUrl(hashTag, viewerURL);
+		
+		lastHashMapped = hashTag;
+		lastUrlMapped = viewerURL;
 		me._log("mapping hash ("+lastHashMapped+") for URL: "+lastUrlMapped);
+	};
+
+	var createBasicPageUrlFromFullUrl = function(urlString) {
+		var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(urlString);
+		var savedURL = '/'+results[1]+'/'+results[2]+'.asp';
+
+		return '/'+results[1]+'/'+results[2]+'.asp';
+	};
+
+	var createViewerUrlFromFullUrl = function(urlString) {
+		var results = /reservationkey.com(.+)$/.exec(urlString);
+		var viewerURL = results[1];
+
+		return viewerURL;
+	};
+
+	var extractBasicPageUrlFromViewerUrl = function(viewerURL) {
+		var results = /([^?]+)\?/.exec(viewerURL);
+		var basicURL = results[1];
+
+		return basicURL;
+	};
+
+	var extractQueryStringParametersFromViewerUrlForViewer = function(viewerURL) {
+		var results = /[^?]+\?(.+)/.exec(viewerURL);
+		var queryStringParameters = results[1];
+
+		return queryStringParameters;
+	};
+
+
+	var createPageHashTagFromFullUrl = function(urlString) {
+		/*var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(urlString);
+		var pagePrefix = results[1]
+		var pageName = results[2];
+		return pagePrefix+"-"+pageName;*/
+		return generateHashFromString(urlString);
+	};
+
+	var associatePageHashTagWithViewerUrl = function(hashTag, viewerURL) {
+		pageHashMap[hashTag] = viewerURL;
+	};
+
+	var getViewerUrlForPageHashTag = function(hashTag) {
+		return pageHashMap[hashTag];
+	};
+
+	var getPageHashTagFromViewerUrl = function(viewerURL) {
+		for (key in pageHashMap) {
+			if (pageHashMap[key] == viewerURL) {
+				return key;
+			}
+		}
+		return null;
+	};
+
+	var getBasicPageUrlForCurrentPage = function() {
+		return extractBasicPageUrlFromViewerUrl(lastUrlMapped);
 	};
 
 	var getPageUrlForCurrentPage = function() {
 		return lastUrlMapped;
 	};
 
-	var getPageHashForCurrentPage = function() {
+	var getPageHashTagForCurrentPage = function() {
 		//return ResKey.HelperUtility.getCurrentPageName();
 		return lastHashMapped;  //this will fail for initial load if the module isn't ON for first page load
 	};
 
 	me._ajaxStateChangeEventHandler = function(e) {	
-		//doing it here can cause us to log incorrect page stores for things like "save"
-		mapHashToURL(xmlHttp.responseURL);
-
 		if (!movingThroughHistory) {
-			previousPage = getPageHashForCurrentPage();
+			var currentPageURL = xmlHttp.responseURL;
+			logAjaxUrl(currentPageURL);
+			saveCurrentPageToHistory();
+		}
+		else {
+			movingThroughHistory = false;
+		}
+		//adjustSelectionOfCurrentPageTab();
+	};	
+	
+	me._pageChangeEventHandler = function(e) {
+		/*if (!movingThroughHistory) {
+			saveCurrentPage();
+			previousPage = getPageHashTagForCurrentPage();
 			savePage(previousPage);
 		}
 		else {
 			movingThroughHistory = false;
 		}
 		adjustSelectionOfCurrentPageTab();
-	};	
-	
-	me._pageChangeEventHandler = function(e) {
-		/*if (!movingThroughHistory) {
-			previousPage = getPageHashForCurrentPage();
-			savePage(previousPage);
-		}
-		else {
-			movingThroughHistory = false;
-		}*/
+		*/
 	};	
 	
 	me._enable = function() {
@@ -952,15 +1032,14 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};
 	
 	me._turnOn = function() {
+		var initialURL = "https://v2.reservationkey.com/reservations/reservations.asp";
 		disableDhtmlHistory();
 		window.location.lasthash = new Array();
-		lastHashMapped = "reservations-availability"; //DEFAULT
-		lastUrlMapped = "https://v2.reservationkey.com/reservations"; //DEFAULT
 		pageHashMap = {};
-		pageHistory = new Array();
-		pageFuture = new Array();
-		previousPage = getPageHashForCurrentPage();
-		savePage(previousPage);
+		lastHashMapped = createPageHashTagFromFullUrl(initialURL);
+		lastUrlMapped = createViewerUrlFromFullUrl(initialURL); //DEFAULT
+		associatePageHashTagWithViewerUrl(lastHashMapped, lastUrlMapped);
+		saveCurrentPageToHistory();
 		movingThroughHistory = false;
 		
 		//at this point, hash has already changed
