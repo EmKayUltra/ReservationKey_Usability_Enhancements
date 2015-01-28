@@ -769,9 +769,14 @@ ResKey.Modules.CreditCardTypeAutoSelector.prototype.constructor = ResKey.Modules
 
 
 /****BEGIN AjaxHistory****/
+//IDEA: we could wrap all the viewer* functions, and use those to capture page changes.  may not be able to do this without unsafewindow?
+//IDEA: we could pass in which viewer function needs to be called for a particular hashmap
+//the problem w/ this is we don't want to wade back through a whole lot of actions, just a few special cases we care about. namely, resdetails
+//TODO: FEATURE currently works for most cases, but some need special attention (like clicking a reservation from the calendar & can't go back b/c polltime isn't fast enough to pick up the rapid page load returning AND the ajax call returning)
 //TODO: FEATURE this needs to handle edge cases like opening a reservation from the calendar (which it does except for tab coloring)
 //TODO: FEATURE allow this to work across actual back actions (for instance, going from "website/*" pages to "properties/*" pages & back) - probably because we're always using "viewer" and not the subfunctions
 //TODO: FEATURE we may want to remove (sid=[\.0-9]+)& to force a full reload instead of the saved one
+//TODO: BUG reload of page immediately (thinks "back" was hit)
 //TODO: REVIEW BUG when going back to an ajax page that was only a partial load (loading "payments" on a reservation, or opening a forum thread, for instance) - would this have happened with the "named pages" approach?
 //TODO: REVIEW MAYBE BUG this is using the AJAX state, which will probably result in some problems w/ autorefresh (maybe?)
 //TODO: REVIEW MAYBE BUG could this be causing multiple credit card processing or payments for instance, since we're using the ajax state change?
@@ -858,7 +863,6 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	var savePageHashTag = function(pageHashTagToSave) {
 		if (pageHashTagToSave != null) {
 			me._log("saving page: "+pageHashTagToSave);
-			window.location.lasthash.push(window.location.hash);
 			window.location.hash = pageHashTagToSave;
 		}
 	};
@@ -868,16 +872,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		me._log("going back to page: "+pageHashTagToLoad);
 		movingThroughHistory = true;
 
-		updateHash();
-
-		//loadPage(prevPage);
 		loadPageFromHashTag(pageHashTagToLoad);
-	};
-
-	var updateHash = function() {
-		if (movingThroughHistory && window.location.lasthash.length > 0) { //pageHistory.length > 0
-			window.location.lasthash.pop();
-		}
 	};
 
 	var swallowBackspace = function() { //prevent "back" initiation with backspace - courtesy of http://stackoverflow.com/questions/25806608/how-to-detect-browser-back-button-event-cross-browser
@@ -944,14 +939,14 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};
 
 	var extractBasicPageUrlFromViewerUrl = function(viewerURL) {
-		var results = /([^?]+)\?/.exec(viewerURL);
+		var results = /^([^?]+)\??/.exec(viewerURL);
 		var basicURL = results[1];
 
 		return basicURL;
 	};
 
 	var extractQueryStringParametersFromViewerUrlForViewer = function(viewerURL) {
-		var results = /[^?]+\?(.+)/.exec(viewerURL);
+		var results = /^[^?]+\?(.+)$/.exec(viewerURL);
 		var queryStringParameters = results[1];
 
 		return queryStringParameters;
@@ -959,10 +954,10 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 
 
 	var createPageHashTagFromFullUrl = function(urlString) {
-		/*var results = /reservationkey.com\/([^.]+)\/([^.]+)\.asp/.exec(urlString);
-		var pagePrefix = results[1]
-		var pageName = results[2];
-		return pagePrefix+"-"+pageName;*/
+		// var results = /reservationkey.com\/([^\/]+)\/([^.]+)\.asp/.exec(urlString);
+		// var pagePrefix = results[1]
+		// var pageName = results[2];
+		//return pagePrefix+"-"+pageName;
 		return generateHashFromString(urlString);
 	};
 
@@ -996,16 +991,34 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		return lastHashMapped;  //this will fail for initial load if the module isn't ON for first page load
 	};
 
-	me._ajaxStateChangeEventHandler = function(e) {	
+	var pageContentsQualifyForHistoricalSaving = function(html) {
+		//TODO: might be good to look at html & look for something that indicates it is a "full page" so should be saved to history (and not just an AJAX call)
+		//work could be done here.
+
+		//THIS MAY BE OUTMODED BY CAPTURING SPECIFIC XMLHTTP STATECHANGES
+		
+		// if (html.indexOf("id=\"working\"") >= 0) { 
+		// 	return true;
+		// }
+		// return false;
+		return true;
+	};
+
+	var handleAjaxStateChanged = function(e){
 		if (!movingThroughHistory) {
 			var currentPageURL = xmlHttp.responseURL;
-			logAjaxUrl(currentPageURL);
-			saveCurrentPageToHistory();
+			if (pageContentsQualifyForHistoricalSaving(xmlHttp.responseText)) {
+				logAjaxUrl(currentPageURL);
+				saveCurrentPageToHistory();
+			}
 		}
 		else {
 			movingThroughHistory = false;
 		}
-		//adjustSelectionOfCurrentPageTab();
+	};
+
+	me._ajaxStateChangeEventHandler = function(e) {	
+		/*handleAjaxStateChanged();*/
 	};	
 	
 	me._pageChangeEventHandler = function(e) {
@@ -1032,16 +1045,86 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};
 	
 	me._turnOn = function() {
-		var initialURL = "https://v2.reservationkey.com/reservations/reservations.asp";
+		var initialURL = "https://v2.reservationkey.com/reservations/availability.asp";
 		disableDhtmlHistory();
-		window.location.lasthash = new Array();
 		pageHashMap = {};
-		lastHashMapped = createPageHashTagFromFullUrl(initialURL);
-		lastUrlMapped = createViewerUrlFromFullUrl(initialURL); //DEFAULT
-		associatePageHashTagWithViewerUrl(lastHashMapped, lastUrlMapped);
+		logAjaxUrl(initialURL);
 		saveCurrentPageToHistory();
 		movingThroughHistory = false;
-		
+		console.log(pageHashMap);
+
+		//IDEA: wrap viewer - seems to only work for first function call then it gets overwritten somehow?
+		(function(){
+			var stateChangedOld = window.stateChanged;
+			window.stateChanged = function() {
+				if (xmlHttp.readyState==4) { 
+					handleAjaxStateChanged();
+					stateChangedOld();
+				}
+			};
+			var stateChanged_openerOld = window.stateChanged_opener;
+			window.stateChanged_opener = function() {
+				if (xmlHttp.readyState==4) { 
+					//handleAjaxStateChanged();
+					stateChanged_openerOld();
+				}
+			};
+			var stateChanged_genericOld = window.stateChanged_generic;
+			window.stateChanged_generic = function() {
+				if (xmlHttp.readyState==4) { 
+					//handleAjaxStateChanged();
+					stateChanged_genericOld();
+				}
+			};
+			var stateChanged_generic_openerOld = window.stateChanged_generic_opener;
+			window.stateChanged_generic_opener = function() {
+				if (xmlHttp.readyState==4) { 
+					//handleAjaxStateChanged();
+					stateChanged_generic_openerOld();
+				}
+			};
+			var stateChanged_vresOld = window.stateChanged_vres;
+			window.stateChanged_vres = function() {
+				if (xmlHttp.readyState==4) { 
+					//handleAjaxStateChanged();
+					stateChanged_vresOld();
+				}
+			};
+			var stateChanged_getroomsettingsOld = window.stateChanged_getroomsettings;
+			window.stateChanged_getroomsettings = function() {
+				if (xmlHttp.readyState==4) { 
+					//handleAjaxStateChanged();
+					stateChanged_getroomsettingsOld();
+				}
+			};
+/*
+			var viewerOld = window.viewer;
+			window.viewer = function(myurl, str, sidetabnum) { 
+				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+				viewerOld(myurl, str, sidetabnum); 
+			};
+			var viewer_openerOld = window.viewer_opener;
+			window.viewer_opener = function(myurl, str, sidetabnum) { 
+				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+				viewer_openerOld(myurl, str, sidetabnum); 
+			};
+			var viewer_genericOld = window.viewer_generic;
+			window.viewer_generic = function(myurl, iddiv) {
+				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+				viewer_genericOld(myurl, iddiv);
+			};
+			var viewer_generic_openerOld = window.viewer_generic_opener;
+			window.viewer_generic_opener = function(myurl, iddiv) {
+				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+				viewer_generic_openerOld(myurl, iddiv);
+			};
+			var viewer_vresOld = window.viewer_vres;
+			window.viewer_vres = function(myurl, iddiv, todo) {
+				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+				viewer_vresOld(myurl, iddiv, todo);
+			};*/
+		})();
+
 		//at this point, hash has already changed
 		window.onhashchange = function() {
 			if (!movingThroughHistory) {
@@ -1050,7 +1133,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 					me._log("in-page mechanism clicked."); //this is being triggered when back button clicked
 				} else { //Browser back button was clicked 
 					me._log("back button clicked.");
-					if (window.location.hash != '') {
+					if (window.location.hash != '') { //TODO: this is broken with the way we're doing it now, revisit
 						backPage();
 					} else { //default back behavior
 						history.pushState("", document.title, window.location.pathname);
@@ -1069,7 +1152,6 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	
 	me._turnOff = function() {
 		window.onhashchange = null;
-		window.location.lasthash = null;
 		window.location.hash = '';
 		previousPage = null;
 		pageHistory = null;
