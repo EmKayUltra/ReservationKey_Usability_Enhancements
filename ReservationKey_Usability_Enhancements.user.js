@@ -78,11 +78,11 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.COOKIE_MODULE_OFF_VALUE = 0;
 	this.COOKIE_MODULE_DEFAULT_VALUE = this.COOKIE_MODULE_OFF_VALUE;
 	this.MODULE_DEFAULTS = { cookie_prefix: this.COOKIE_PREFIX, event_prefix: this.COOKIE_PREFIX, autoLoad: true, logging: this.ENABLE_MODULE_LOGGING_DEFAULT, module_name: "", module_name_readable: "", module_description: "" };
-	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser"];
-	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory" ];
+	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser", "AjaxHistory"];
+	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh" ];
 	this.MODULES_LIST_DISCONTINUED = [ "ReservationLinkBuilder" ];
-	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
-							"AutoRefresh" : { logging: true },
+	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: false },
+							"AutoRefresh" : { logging: false },
 							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
 	};
 });
@@ -772,7 +772,7 @@ ResKey.Modules.CreditCardTypeAutoSelector.prototype.constructor = ResKey.Modules
 //TODO: FEATURE allow this to work across actual back actions (for instance, going from "website/*" pages to "properties/*" pages & back) - think its now happening b/c ResKey does a redirect or ajax load from querystring params
 //TODO: BUG first load of page reloads immediately (thinks "back" was hit)
 //TODO: BUG tab coloring not working for reports
-//TODO: REFACTOR
+//TODO: REFACTOR out hash code generation, url manipulation, and page determination into helper classes
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o){
 	var me = this;
 	var previousPage;
@@ -883,7 +883,6 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};
 
 	//http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
-	//TODO: REFACTOR move this out to different helper class
 	var generateHashFromString = function(stringToHash) {
 		var hash = 0, i, chr, len;
 		if (stringToHash.length == 0) return hash;
@@ -900,27 +899,6 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		//we need to retroactively set the AJAX url that was set		
 		var initialFullURL;
 
-		/*var basicURL = createBasicPageUrlFromInitialFullUrl(window.location.href);
-		me._log("initial basicURL: "+basicURL);
-		me._log("easy answer: "+xmlHttp.responseURL);
-		if (basicURL == "/reservations/") {
-			basicURL = "/reservations/availability.asp";
-		}
-		else if (basicURL == "/web/") {
-			basicURL = "/web/reservationpages.asp";
-		}
-		else if (basicURL == "/properties/") {
-			basicURL = "/properties/properties.asp";
-		}
-		else if (basicURL == "/settings/") {
-			basicURL = "/settings/myaccount.asp";
-		}
-		initialFullURL = "https://v2.reservationkey.com" + basicURL;
-
-		me._log("initialFullURL: "+initialFullURL);
-		return initialFullURL;*/
-
-		//all of above unnecessary because we can just do this: 
 		initialFullURL = xmlHttp.responseURL;
 		//trim querystring params
 		if (initialFullURL.indexOf("?") != -1) {
@@ -1042,7 +1020,6 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};
 
 	var getPageHashTagForCurrentPage = function() {
-		//return ResKey.HelperUtility.getCurrentPageName();
 		return lastHashMapped;  //this will fail for initial load if the module isn't ON for first page load
 	};
 
@@ -1092,16 +1069,15 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};	
 	
 	me._pageChangeEventHandler = function(e) {
-		/*if (!movingThroughHistory) {
-			saveCurrentPage();
-			previousPage = getPageHashTagForCurrentPage();
-			savePage(previousPage);
-		}
-		else {
-			movingThroughHistory = false;
-		}
-		adjustSelectionOfCurrentPageTab();
-		*/
+		// if (!movingThroughHistory) {
+		// 	saveCurrentPage();
+		// 	previousPage = getPageHashTagForCurrentPage();
+		// 	savePage(previousPage);
+		// }
+		// else {
+		// 	movingThroughHistory = false;
+		// }
+		// adjustSelectionOfCurrentPageTab();
 	};	
 	
 	me._enable = function() {
@@ -1122,7 +1098,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		saveCurrentPageToHistory();
 		movingThroughHistory = false;
 
-		//IDEA: wrap viewer - seems to only work for first function call then it gets overwritten somehow?
+		//creating new wrapper functions where needed to properly capture changing pages, etc
 		(function(){
 			var stateChangedOld = window.stateChanged;
 			window.stateChanged = function() {
@@ -1130,68 +1106,68 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 					handleAjaxStateChanged();
 					stateChangedOld();
 				}
-			};
-			var stateChanged_openerOld = window.stateChanged_opener;
-			window.stateChanged_opener = function() {
-				if (xmlHttp.readyState==4) { 
-					//handleAjaxStateChanged();
-					stateChanged_openerOld();
-				}
-			};
-			var stateChanged_genericOld = window.stateChanged_generic;
-			window.stateChanged_generic = function() {
-				if (xmlHttp.readyState==4) { 
-					//handleAjaxStateChanged();
-					stateChanged_genericOld();
-				}
-			};
-			var stateChanged_generic_openerOld = window.stateChanged_generic_opener;
-			window.stateChanged_generic_opener = function() {
-				if (xmlHttp.readyState==4) { 
-					//handleAjaxStateChanged();
-					stateChanged_generic_openerOld();
-				}
-			};
-			var stateChanged_vresOld = window.stateChanged_vres;
-			window.stateChanged_vres = function() {
-				if (xmlHttp.readyState==4) { 
-					//handleAjaxStateChanged();
-					stateChanged_vresOld();
-				}
-			};
-			var stateChanged_getroomsettingsOld = window.stateChanged_getroomsettings;
-			window.stateChanged_getroomsettings = function() {
-				if (xmlHttp.readyState==4) { 
-					//handleAjaxStateChanged();
-					stateChanged_getroomsettingsOld();
-				}
-			};
-/*
-			var viewerOld = window.viewer;
-			window.viewer = function(myurl, str, sidetabnum) { 
-				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
-				viewerOld(myurl, str, sidetabnum); 
-			};
-			var viewer_openerOld = window.viewer_opener;
-			window.viewer_opener = function(myurl, str, sidetabnum) { 
-				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
-				viewer_openerOld(myurl, str, sidetabnum); 
-			};
-			var viewer_genericOld = window.viewer_generic;
-			window.viewer_generic = function(myurl, iddiv) {
-				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
-				viewer_genericOld(myurl, iddiv);
-			};
-			var viewer_generic_openerOld = window.viewer_generic_opener;
-			window.viewer_generic_opener = function(myurl, iddiv) {
-				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
-				viewer_generic_openerOld(myurl, iddiv);
-			};
-			var viewer_vresOld = window.viewer_vres;
-			window.viewer_vres = function(myurl, iddiv, todo) {
-				console.log("WRAPPED VIEWER REPORTING: "+myurl); 
-				viewer_vresOld(myurl, iddiv, todo);
-			};*/
+			};		
+			// var stateChanged_openerOld = window.stateChanged_opener;
+			// window.stateChanged_opener = function() {
+			// 	if (xmlHttp.readyState==4) { 
+			// 		//handleAjaxStateChanged();
+			// 		stateChanged_openerOld();
+			// 	}
+			// };
+			// var stateChanged_genericOld = window.stateChanged_generic;
+			// window.stateChanged_generic = function() {
+			// 	if (xmlHttp.readyState==4) { 
+			// 		//handleAjaxStateChanged();
+			// 		stateChanged_genericOld();
+			// 	}
+			// };
+			// var stateChanged_generic_openerOld = window.stateChanged_generic_opener;
+			// window.stateChanged_generic_opener = function() {
+			// 	if (xmlHttp.readyState==4) { 
+			// 		//handleAjaxStateChanged();
+			// 		stateChanged_generic_openerOld();
+			// 	}
+			// };
+			// var stateChanged_vresOld = window.stateChanged_vres;
+			// window.stateChanged_vres = function() {
+			// 	if (xmlHttp.readyState==4) { 
+			// 		//handleAjaxStateChanged();
+			// 		stateChanged_vresOld();
+			// 	}
+			// };
+			// var stateChanged_getroomsettingsOld = window.stateChanged_getroomsettings;
+			// window.stateChanged_getroomsettings = function() {
+			// 	if (xmlHttp.readyState==4) { 
+			// 		//handleAjaxStateChanged();
+			// 		stateChanged_getroomsettingsOld();
+			// 	}
+			// };
+
+			// var viewerOld = window.viewer;
+			// window.viewer = function(myurl, str, sidetabnum) { 
+			// 	console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+			// 	viewerOld(myurl, str, sidetabnum); 
+			// };
+			// var viewer_openerOld = window.viewer_opener;
+			// window.viewer_opener = function(myurl, str, sidetabnum) { 
+			// 	console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+			// 	viewer_openerOld(myurl, str, sidetabnum); 
+			// };
+			// var viewer_genericOld = window.viewer_generic;
+			// window.viewer_generic = function(myurl, iddiv) {
+			// 	console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+			// 	viewer_genericOld(myurl, iddiv);
+			// };
+			// var viewer_generic_openerOld = window.viewer_generic_opener;
+			// window.viewer_generic_opener = function(myurl, iddiv) {
+			// 	console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+			// 	viewer_generic_openerOld(myurl, iddiv);
+			// };
+			// var viewer_vresOld = window.viewer_vres;
+			// window.viewer_vres = function(myurl, iddiv, todo) {
+			// 	console.log("WRAPPED VIEWER REPORTING: "+myurl); 
+			// 	viewer_vresOld(myurl, iddiv, todo);
+			// };
 		})();
 
 		//at this point, hash has already changed
@@ -1202,7 +1178,7 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 					me._log("in-page mechanism clicked."); //this is being triggered when back button clicked
 				} else { //Browser back button was clicked 
 					me._log("back button clicked.");
-					if (window.location.hash != '') { //TODO: this is broken with the way we're doing it now, revisit
+					if (window.location.hash != '') {
 						backPage();
 					} else { //default back behavior
 						history.pushState("", document.title, window.location.pathname);
