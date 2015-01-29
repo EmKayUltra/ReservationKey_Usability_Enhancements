@@ -63,9 +63,9 @@ console.log("starting ResKey GM script...");
 /****BEGIN Settings****/
 Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	//May find a need to change one of these for some reason...
-	this.ENABLE_LOGGING = true;
+	this.ENABLE_LOGGING = false;
 	this.ENABLE_MODULE_LOGGING_DEFAULT = false;
-	this.ALLOW_EXPERIMENTAL_MODULES = true;
+	this.ALLOW_EXPERIMENTAL_MODULES = false;
 	this.CURRENTPAGE_POLLTIME_MILLISECONDS = 100;
 	this.AJAXSTATE_POLLTIME_MILLISECONDS = 100;
 	this.DEFAULT_BILLING_COUNTRY = "US"; //this must be the two letter representation of the country as ResKey understands it
@@ -81,8 +81,8 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser"];
 	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh", "AjaxHistory" ];
 	this.MODULES_LIST_DISCONTINUED = [ "ReservationLinkBuilder" ];
-	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
-							"AutoRefresh" : { logging: true },
+	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: false },
+							"AutoRefresh" : { logging: false },
 							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
 	};
 });
