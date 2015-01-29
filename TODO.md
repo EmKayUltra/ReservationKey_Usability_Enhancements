@@ -2,7 +2,8 @@
 
 ### New Modules
 - [X] better billing address parsing - v1.1
-
+- [X] browser history - back and forward buttons v1.3b - BETA TESTING
+- [ ] autorefresh calendar
 
 ### Features
 - [X] BillingAddressParser - click "use guest address" cause parser to run - v1.1.1

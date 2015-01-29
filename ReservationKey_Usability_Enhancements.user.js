@@ -16,7 +16,7 @@
 // @require    http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js
 // @require    http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js
 // @require    https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js
-// @version    1.2
+// @version    1.3b
 // @grant 	   none
 // ==/UserScript==
 /* NOTE: "@include" very specific (no general-case asterixes, etc) because otherwise all of this loads for every AJAX call as well */
@@ -769,11 +769,9 @@ ResKey.Modules.CreditCardTypeAutoSelector.prototype.constructor = ResKey.Modules
 
 
 /****BEGIN AjaxHistory****/
-//IDEA: we could pass in which viewer function needs to be called for a particular hashmap - the problem w/ this is we don't want to wade back through a whole lot of actions, just a few special cases we care about. namely, resdetails
-//TODO: FEATURE allow this to work across actual back actions (for instance, going from "website/*" pages to "properties/*" pages & back) - think its now happening b/c 
-//TODO: BUG reload of page immediately (thinks "back" was hit)
-//TODO: BUG this is using the AJAX state, which will probably result in some problems w/ autorefresh (maybe?)
-//TODO: TEST all pages if possible, including forums - this isn't working in some places, losing querystring params is killing it
+//TODO: FEATURE allow this to work across actual back actions (for instance, going from "website/*" pages to "properties/*" pages & back) - think its now happening b/c ResKey does a redirect or ajax load from querystring params
+//TODO: BUG first load of page reloads immediately (thinks "back" was hit)
+//TODO: BUG tab coloring not working for reports
 //TODO: REFACTOR
 Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o){
 	var me = this;
@@ -818,12 +816,8 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	var adjustSelectionOfCurrentPageTabToMatchBasicURL = function(basicURL) {
 		me._log("adjusting menu item selection to match page: "+basicURL);
 
-		//this currently doesn't work for certain special cases like the reservation details and probably more
-
-		//clear old selection if we can add a new one
-		// if (jQuery("#sidebuttons a[onclick*='"+url+"']").length > 0) {
+		//clear old selection
 		jQuery("#sidebuttons a").parents("td[id*='t']").filter(function(o){ return jQuery(this).css("background-color") == "rgb(255, 255, 255)"}).css("backgroundColor", "").css("backgroundImage", "none");
-		// }
 
 		if (pageHasHorizontalMenu(basicURL)) {
 			setHorizontalMenuItemAsCurrentPage(basicURL);
@@ -1003,8 +997,14 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 			queryStringParameters = results[1];
 		}
 		//remove old sid & viewer will add a new one
-		queryStringParameters = queryStringParameters.replace(/(&sid=[\.0-9]+)/, ''); 
+		queryStringParameters = removeSidQuerystringParameter(queryStringParameters);
 		return queryStringParameters;
+	};
+
+	var removeSidQuerystringParameter = function(urlString) {
+ 		var urlWithoutSidQuerystringParameter = urlString.replace(/(&sid=[\.0-9]+)/, ''); 
+
+ 		return urlWithoutSidQuerystringParameter;
 	};
 
 
@@ -1046,23 +1046,38 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		return lastHashMapped;  //this will fail for initial load if the module isn't ON for first page load
 	};
 
-	var pageContentsQualifyForHistoricalSaving = function(html) {
-		//TODO: might be good to look at html & look for something that indicates it is a "full page" so should be saved to history (and not just an AJAX call)
-		//work could be done here.
-
-		//THIS MAY BE OUTMODED BY CAPTURING SPECIFIC XMLHTTP STATECHANGES
+	var pageQualifiesForHistoricalSaving = function(xmlHttpResponse) {
+		//only save if not identical to previous save.
+		var newURL = createViewerUrlFromFullUrl(xmlHttpResponse.responseURL);
+		var oldURL = lastUrlMapped;
 		
-		// if (html.indexOf("id=\"working\"") >= 0) { 
-		// 	return true;
-		// }
-		// return false;
+		var pageIsARefresh = areTwoUrlsWithQueryStringsTheSame(newURL, oldURL);
+
+		if (pageIsARefresh) {
+			return false;
+		}
+
 		return true;
+	};
+
+	var areTwoUrlsWithQueryStringsTheSame = function(url, urlToCompareTo) {
+		//remove extraneous sid so we are doing a true comparison
+		url = removeSidQuerystringParameter(url);
+		urlToCompareTo = removeSidQuerystringParameter(urlToCompareTo);
+
+		//remove trailing ? for comparison		
+		url = (/\?$/.test(url)) ? url.substring(0, url.length-1) : url;
+		urlToCompareTo = (/\?$/.test(urlToCompareTo)) ? urlToCompareTo.substring(0, urlToCompareTo.length-1) : urlToCompareTo;
+
+		me._log("comparing previous URL ("+url+") with current URL ("+urlToCompareTo+")");
+
+		return (url == urlToCompareTo);
 	};
 
 	var handleAjaxStateChanged = function(e){
 		if (!movingThroughHistory) {
 			var currentPageURL = xmlHttp.responseURL;
-			if (pageContentsQualifyForHistoricalSaving(xmlHttp.responseText)) {
+			if (pageQualifiesForHistoricalSaving(xmlHttp)) {
 				logAjaxUrl(currentPageURL);
 				saveCurrentPageToHistory();
 			}
