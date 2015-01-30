@@ -81,8 +81,8 @@ Utils.NamespaceUtility.RegisterClass("ResKey", "Settings", new function(){
 	this.MODULES_LIST_RELEASED = [ "ForceHttps", "AutoReminders", "DoublePaymentPrevention", "CreditCardTypeAutoSelector", "BillingAddressParser", "AjaxHistory"];
 	this.MODULES_LIST_EXPERIMENTAL = [ "AutoRefresh" ];
 	this.MODULES_LIST_DISCONTINUED = [ "ReservationLinkBuilder" ];
-	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: false },
-							"AutoRefresh" : { logging: false },
+	this.MODULE_OPTIONS = { "AjaxHistory" : { logging: true },
+							"AutoRefresh" : { logging: true },
 							"BillingAddressParser" : { default_country: this.DEFAULT_BILLING_COUNTRY }
 	};
 });
