@@ -8,7 +8,7 @@ Table of Contents
 
 
 ## Update Log<a id="updateLog"></a>
-- **1/29/2015**: v1.3b released - <a href="">CLICK HERE TO UPDATE/INSTALL</a>.  Added Browser History module.  Allows for limited use of browser's back/forward buttons.  Removed pre-booked reservation link builder (superceded by native ResKey functionality).
+- **1/29/2015**: v1.3b released - <a href="https://raw.githubusercontent.com/EmKayUltra/ReservationKey_Usability_Enhancements/release-1.3b/ReservationKey_Usability_Enhancements.user.js">CLICK HERE TO UPDATE/INSTALL</a>.  Added Browser History module.  Allows for limited use of browser's back/forward buttons.  Removed pre-booked reservation link builder (superceded by native ResKey functionality).
 - **1/26/2015**: v1.2 released -  <a href="https://raw.githubusercontent.com/EmKayUltra/ReservationKey_Usability_Enhancements/release-v1.2/ReservationKey_Usability_Enhancements.user.js">CLICK HERE TO UPDATE/INSTALL</a>.  Added pre-booked reservation link builder.  Allows you to easily use the new feature of creating prebooked reservation links to send to guests (read more about this in the System Change Log).
 		  ![Reservation Link Builder](http://i60.tinypic.com/2dh5v9w.jpg)
 - **1/22/2015**: v1.1 released - <a href="https://raw.githubusercontent.com/EmKayUltra/ReservationKey_Usability_Enhancements/release-v1.1/ReservationKey_Usability_Enhancements.user.js">CLICK HERE TO UPDATE/INSTALL</a>.  Added Billing Address Parser, which will take your contact address & separate it out into the correct components for your credit card billing address (address, city, state, zip, country):
