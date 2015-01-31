@@ -801,11 +801,11 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 	};
 
 	var setHorizontalMenuItemAsCurrentPage = function(basicURL) {
-		jQuery("#sidebuttons a[onclick*='"+basicURL+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sideshade.gif')").css("backgroundRepeat", "repeat-y").css("backgroundPosition", "right center");
+		jQuery("#sidebuttons a:visible[onclick*='"+basicURL+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sideshade.gif')").css("backgroundRepeat", "repeat-y").css("backgroundPosition", "right center");
 	};
 
 	var setVerticalMenuItemAsCurrentPage = function(basicURL) {
-		jQuery("#sidebuttons a[onclick*='"+basicURL+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sidetabbackon.gif')").css("backgroundRepeat", "repeat-x").css("backgroundPosition", "center bottom");
+		jQuery("#sidebuttons a:visible[onclick*='"+basicURL+"']").parents("td[id*='t']").css("backgroundColor", "white").css("backgroundImage","url('../i/sidetabbackon.gif')").css("backgroundRepeat", "repeat-x").css("backgroundPosition", "center bottom");
 	};
 
 	var adjustSelectionOfCurrentPageTab = function() {
@@ -820,6 +820,9 @@ Utils.NamespaceUtility.RegisterClass("ResKey.Modules", "AjaxHistory", function(o
 		jQuery("#sidebuttons a").parents("td[id*='t']").filter(function(o){ return jQuery(this).css("background-color") == "rgb(255, 255, 255)"}).css("backgroundColor", "").css("backgroundImage", "none");
 
 		if (pageHasHorizontalMenu(basicURL)) {
+			if (basicURL.indexOf("/reports/") > -1) { //one-off clean up of reports URL for tab-matching
+				basicURL = "mtoggle(\\'m5\\')";
+			}
 			setHorizontalMenuItemAsCurrentPage(basicURL);
 		}
 		else {
