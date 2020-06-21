@@ -1,4 +1,4 @@
-# ReservationKey_Usability_Enhancements
+# ReservationKey-Usability-Enhancements
 
 Table of Contents
 - <a href="#updateLog">Update Log</a>
